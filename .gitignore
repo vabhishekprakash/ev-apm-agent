@@ -1,1 +1,46 @@
-﻿data/
+﻿# Data files
+data/*.csv
+data/*.parquet
+data/**/*.csv
+data/**/*.parquet
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.venv/
+venv/
+.env
+.env.*
+
+# Model artifacts
+*.pkl
+*.joblib
+*.onnx
+*.pt
+*.pth
+*.h5
+*.safetensors
+models/*.bin
+layer2/artifacts/
+layer2/checkpoints/
+
+# Jupyter
+.ipynb_checkpoints/
+*.ipynb_checkpoints
+
+# IDE
+.vscode/*
+!.vscode/settings.json
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+logs/
