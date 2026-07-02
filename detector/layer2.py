@@ -19,6 +19,8 @@ from datetime import datetime
 from ocpp_messages import MeterValues, StartTransaction, StopTransaction
 
 TEMPERATURE_MEASURAND = "Temperature"
+POWER_MEASURAND = "Power.Active.Import"
+ENERGY_MEASURAND = "Energy.Active.Import.Register"
 
 # Sensor-location strings vary across vendor firmware (12 vendor strings in
 # inventory, audit flag 8); normalize the plausible spellings to three slots.
@@ -110,6 +112,98 @@ def _temp_asymmetry_features(session_meter_values: list) -> dict:
         "temp_asymmetry_max": max(asymmetry),
         "temp_asymmetry_mean": sum(asymmetry) / len(asymmetry),
         "temp_asymmetry_final": asymmetry[-1],
+    }
+
+
+def _measurand_series(session_meter_values: list, measurand: str) -> list[tuple]:
+    """All samples of one measurand as [(timestamp, value), ...], time-sorted.
+
+    Accepts the same sampledValue-shaped dicts as the temperature features.
+    Rows with unparseable values are skipped.
+    """
+    series = []
+    for sample in session_meter_values:
+        if sample.get("measurand") != measurand:
+            continue
+        try:
+            value = float(sample["value"])
+        except (KeyError, TypeError, ValueError):
+            continue
+        series.append((sample.get("timestamp"), value))
+    series.sort(key=lambda pair: pair[0])
+    return series
+
+
+def _slope(points: list[tuple]) -> float | None:
+    """Least-squares slope of value over elapsed seconds; None for <2 points."""
+    if len(points) < 2:
+        return None
+    t0 = points[0][0]
+    xs = [(ts - t0).total_seconds() for ts, _ in points]
+    ys = [value for _, value in points]
+    n = len(points)
+    mean_x = sum(xs) / n
+    mean_y = sum(ys) / n
+    denom = sum((x - mean_x) ** 2 for x in xs)
+    if denom == 0:  # all samples at the same instant
+        return None
+    return sum((x - mean_x) * (y - mean_y) for x, y in zip(xs, ys)) / denom
+
+
+def _power_curve_features(session_meter_values: list) -> dict:
+    """CC-CV power-curve shape features (SPEC Day 5 Task 1).
+
+    peak_power           — max Power.Active.Import in the session
+    cc_cv_taper_slope    — least-squares slope of power over time from the
+                           peak onward (the CV tapering phase); expected
+                           negative on a healthy full charge
+    cc_cv_peak_frac_final — final power as a fraction of peak power (proxy
+                           for how "full" the charge got — the SoC-proxy
+                           strategy for sessions where SoC reports 0)
+    All None when the session carries no power samples.
+    """
+    series = _measurand_series(session_meter_values, POWER_MEASURAND)
+    if not series:
+        return {
+            "peak_power": None,
+            "cc_cv_taper_slope": None,
+            "cc_cv_peak_frac_final": None,
+        }
+    values = [value for _, value in series]
+    peak = max(values)
+    peak_index = values.index(peak)
+    return {
+        "peak_power": peak,
+        "cc_cv_taper_slope": _slope(series[peak_index:]),
+        "cc_cv_peak_frac_final": values[-1] / peak if peak > 0 else None,
+    }
+
+
+def _session_scale_features(session_transaction: dict, session_meter_values: list) -> dict:
+    """Duration and energy scale of one session (SPEC Day 5 Task 2).
+
+    duration_sec — from the transaction's start/stop timestamps
+    energy_wh    — last minus first Energy.Active.Import.Register reading
+    energy_per_second — energy_wh / duration_sec
+
+    session_transaction needs start_timestamp / stop_timestamp keys
+    (datetime). energy fields are None without energy samples; duration is
+    None for still-open sessions.
+    """
+    start = session_transaction.get("start_timestamp")
+    stop = session_transaction.get("stop_timestamp")
+    duration = (stop - start).total_seconds() if start and stop else None
+
+    series = _measurand_series(session_meter_values, ENERGY_MEASURAND)
+    energy = series[-1][1] - series[0][1] if len(series) >= 2 else None
+
+    per_second = None
+    if energy is not None and duration is not None and duration > 0:
+        per_second = energy / duration
+    return {
+        "duration_sec": duration,
+        "energy_wh": energy,
+        "energy_per_second": per_second,
     }
 
 
