@@ -80,3 +80,19 @@ path) — encoded as a Layer 1 sub-detector.
    energy/power/voltage/current/SoC rows indistinguishably. Re-export with
    `measurand = 'Energy.Active.Import.Register' AND unit = 'Wh'`
    (already in `data/sql/meter_values.sql`).
+
+### Reference-set flags (added 2026-07-02, on delivery of data/reference/*.csv)
+
+7. The delivered `normal_sessions.csv` has **10,090 sessions across 38
+   connectors (28 stations)** — not the 23,084 sessions / 46 active connectors
+   from the Week 1 audit. The window matches (2026-04-01 → 2026-06-30) and the
+   stray `connectorId=0` session is present, but PRABHAEV004N's ~4,439-session
+   block is absent (max per-connector count in the file is 1,047). Either the
+   audit counted differently or this export is partial — confirm with the data
+   owner before treating the tier table above as reproducible. Tiers
+   recomputed from the delivered file: heavy 1 / medium 11 / light 10 /
+   marginal 10 / sparse 6.
+8. `charger_stations.csv` matches inventory (80 connectors, 39 stations); it
+   counts 12 vendor strings including a literal `NULL` pair — the NaN
+   chargepoint from flag 1. `chargepoint.csv` likewise has 20 fw_version
+   values including the null.
