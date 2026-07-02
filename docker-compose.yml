@@ -30,7 +30,9 @@ services:
       ALERT_URL: http://ui:8000/alerts
       REFERENCE_DIR: /app/data/reference
       SILENCE_THRESHOLD_SECONDS: ${SILENCE_THRESHOLD_SECONDS:-90}
-      LAYER2_THRESHOLD: ${LAYER2_THRESHOLD:--0.1}
+      # Calibrated on held-out normals (notebook 03) — the SPEC default -0.1
+      # flags ~6% of normal sessions, over the 5% acceptance bar.
+      LAYER2_THRESHOLD: ${LAYER2_THRESHOLD:--0.1193}
     volumes:
       - ./data:/app/data:ro
       - ./models:/app/models:ro

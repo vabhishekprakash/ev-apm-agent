@@ -13,10 +13,18 @@ against OCPP 1.6 sampledValue-shaped dicts:
 so they slot in unchanged once the re-export arrives.
 """
 
+import os
+import pickle
+import sys
 from dataclasses import dataclass
 from datetime import datetime
+from pathlib import Path
 
 from ocpp_messages import MeterValues, StartTransaction, StopTransaction
+
+# SPEC Day 6 default; the deployed value is calibrated on held-out normals
+# (see notebooks/03_isoforest_training.ipynb) and passed via env.
+DEFAULT_LAYER2_THRESHOLD = -0.1
 
 TEMPERATURE_MEASURAND = "Temperature"
 POWER_MEASURAND = "Power.Active.Import"
@@ -292,3 +300,87 @@ class IsolationForestScorer:
     def score(self, features: SessionFeatures) -> float:
         """Anomaly score for one session; higher = more anomalous."""
         raise NotImplementedError
+
+
+class Layer2Anomaly:
+    """Inference over the committed Isolation Forest artifacts (SPEC Day 6).
+
+    Resolves (hashed_charge_box_id, connector_id) to the per-connector model
+    when one exists, else to the vendor-family pooled model, and scores one
+    session's feature vector. Flag = score < threshold; threshold comes from
+    the LAYER2_THRESHOLD env var (default -0.1 per SPEC — the calibrated
+    deployment value lives in the model index, see notebook 03).
+
+    Models are lazy-loaded and cached; sklearn is imported only via the
+    pickles, so Layer 1 keeps working on machines without it.
+    """
+
+    def __init__(self, models_dir: str | Path = "models",
+                 threshold: float | None = None) -> None:
+        self.models_dir = Path(models_dir)
+        self.threshold = (
+            float(os.environ.get("LAYER2_THRESHOLD", DEFAULT_LAYER2_THRESHOLD))
+            if threshold is None else threshold
+        )
+        self._models: dict[str, object] = {}
+        index_path = self.models_dir / "isoforest_index.pkl"
+        self.available = index_path.exists()
+        if not self.available:
+            print(f"warning: {index_path} not found — Layer 2 scoring disabled",
+                  file=sys.stderr)
+            self.index = {}
+            self._by_identity = {}
+            return
+        with index_path.open("rb") as f:
+            self.index = pickle.load(f)
+        # (hashed_charge_box_id, physical_plug_id) -> connector_pk
+        self._by_identity = {
+            (info["hashed_charge_box_id"], info["physical_plug_id"]): pk
+            for pk, info in self.index.get("connectors", {}).items()
+        }
+        self.features = self.index["features"]
+
+    def _load_model(self, filename: str):
+        if filename not in self._models:
+            with (self.models_dir / filename).open("rb") as f:
+                self._models[filename] = pickle.load(f)
+        return self._models[filename]
+
+    def _model_file_for(self, connector_pk: int) -> str | None:
+        entry = self.index.get("connector_models", {}).get(connector_pk)
+        if entry is not None:
+            return entry["file"]
+        family = self.index.get("connectors", {}).get(connector_pk, {}).get(
+            "vendor_family", "unknown")
+        pooled = self.index.get("pooled_models", {}).get(family)
+        return pooled["file"] if pooled else None
+
+    def score(self, session_features: dict, hashed_charge_box_id: str,
+              connector_id: int) -> tuple[float, bool] | None:
+        """Raw anomaly score + flag for one closed session.
+
+        session_features maps feature name -> value and must cover the
+        trained feature list. Returns None when no model serves this
+        connector, a feature is missing, or artifacts are absent.
+        """
+        if not self.available:
+            return None
+        connector_pk = self._by_identity.get((hashed_charge_box_id, connector_id))
+        if connector_pk is None:
+            return None
+        return self.score_by_connector_pk(session_features, connector_pk)
+
+    def score_by_connector_pk(self, session_features: dict,
+                              connector_pk: int) -> tuple[float, bool] | None:
+        """Same as score(), keyed by connector_pk (what the event stream has)."""
+        if not self.available:
+            return None
+        filename = self._model_file_for(connector_pk)
+        if filename is None:
+            return None
+        try:
+            vector = [[float(session_features[name]) for name in self.features]]
+        except (KeyError, TypeError, ValueError):
+            return None
+        raw = float(self._load_model(filename).decision_function(vector)[0])
+        return raw, raw < self.threshold
