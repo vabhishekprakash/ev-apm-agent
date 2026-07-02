@@ -1,4 +1,4 @@
-"""Make detector/ modules importable from tests without packaging."""
+"""Make the flat detector/ modules importable from tests."""
 
 import sys
 from pathlib import Path
