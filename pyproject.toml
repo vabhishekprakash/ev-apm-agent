@@ -43,7 +43,7 @@ layer2 = [
 
 [tool.setuptools.packages.find]
 where = ["."]
-include = ["layer1*", "layer2*", "replay*", "ui*", "tests*"]
+include = ["detector*", "replay*", "ui*", "tests*"]
 
 [tool.black]
 line-length = 100

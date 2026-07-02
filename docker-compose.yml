@@ -6,8 +6,11 @@ services:
       context: ./replay
       dockerfile: Dockerfile
     container_name: evapm-replay
-    ports:
-      - "8001:8000"
+    environment:
+      DATA_DIR: /app/data/raw
+      REPLAY_SPEED_MULTIPLIER: ${REPLAY_SPEED_MULTIPLIER:-1}
+    volumes:
+      - ./data:/app/data:ro
     networks:
       - evapm-net
 

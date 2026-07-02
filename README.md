@@ -10,6 +10,12 @@ It also sorts alerts — separating noisy self-recovering blips from real proble
 
 We'll prove it on real data from 39 stations across 5+ vendors, deployed as a drop-in container next to an existing charging management system.
 
+## What this is (and isn't)
+
+- **What it is:** Real-time fault detection and per-connector degradation tracking across an EV charging fleet.
+- **What it isn't:** Not a battery health diagnostic — it analyzes charging-station telemetry to flag faults and connector-level degradation, vendor-agnostic.
+- **Where it lives:** Deploys as a sidecar container next to an operator's existing CMS, scaling per fleet size.
+
 ## Team
 
 | Name | Role |
@@ -21,10 +27,10 @@ We'll prove it on real data from 39 stations across 5+ vendors, deployed as a dr
 
 | Folder | Purpose |
 |--------|---------|
-| `data/` | Raw and processed datasets (gitignored — never committed) |
-| `layer1/` | Rules-based fault catcher |
-| `layer2/` | Drift detection and learning layer |
+| `data/` | Raw and processed datasets (gitignored — never committed); committed `sql/` export queries and `reference/` inventory CSVs |
+| `detector/` | Detection service — `layer1.py` (rules-based fault catcher), `layer2.py` (drift detection and learning layer) |
 | `replay/` | Historical replay and simulation tools |
+| `models/` | Trained Layer 2 model artifacts |
 | `ui/` | Operator dashboard and alert interface |
 | `notebooks/` | Exploration, EDA, and prototyping |
 | `docs/` | Architecture, methodology, and runbooks |
