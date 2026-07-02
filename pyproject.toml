@@ -10,8 +10,8 @@ requires-python = "==3.11.*"
 readme = "README.md"
 license = {text = "MIT"}
 authors = [
-    {name = "Abhishek", email = "abhishek@example.com"},
-    {name = "Akhil", email = "akhil@example.com"}
+    {name = "Abhishek", email = "vabhishekprakash@gmail.com"},
+    {name = "Akhil", email = "prasadakhil0909@gmail.com"}
 ]
 dependencies = [
     "pandas>=2.0",
