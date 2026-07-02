@@ -1,16 +1,21 @@
-﻿version: "3.9"
-
 services:
+  # replay -> detector is a JSON-lines stream. Compose services cannot pipe
+  # stdout to each other, so replay appends to a file on the shared event-bus
+  # volume and the detector tails it. Same contract as the local
+  # `python replay/main.py | python detector/main.py` pipeline.
   replay:
     build:
       context: ./replay
       dockerfile: Dockerfile
     container_name: evapm-replay
+    command: sh -c "python main.py > /bus/events.jsonl"
     environment:
-      DATA_DIR: /app/data/raw
+      DATA_DIR: ${DATA_DIR:-/app/data/raw}
       REPLAY_SPEED_MULTIPLIER: ${REPLAY_SPEED_MULTIPLIER:-1}
     volumes:
       - ./data:/app/data:ro
+      - ./tests/fixtures:/app/tests/fixtures:ro
+      - event-bus:/bus
     networks:
       - evapm-net
 
@@ -19,8 +24,20 @@ services:
       context: ./detector
       dockerfile: Dockerfile
     container_name: evapm-detector
-    ports:
-      - "8002:8000"
+    command: sh -c "tail -n +1 -F /bus/events.jsonl | python main.py"
+    environment:
+      ALERT_SINK: http
+      ALERT_URL: http://ui:8000/alerts
+      REFERENCE_DIR: /app/data/reference
+      SILENCE_THRESHOLD_SECONDS: ${SILENCE_THRESHOLD_SECONDS:-90}
+      LAYER2_THRESHOLD: ${LAYER2_THRESHOLD:--0.1}
+    volumes:
+      - ./data:/app/data:ro
+      - ./models:/app/models:ro
+      - event-bus:/bus
+    depends_on:
+      - ui
+      - replay
     networks:
       - evapm-net
 
@@ -30,10 +47,13 @@ services:
       dockerfile: Dockerfile
     container_name: evapm-ui
     ports:
-      - "8003:8000"
+      - "8000:8000"
     networks:
       - evapm-net
 
 networks:
   evapm-net:
     driver: bridge
+
+volumes:
+  event-bus:
