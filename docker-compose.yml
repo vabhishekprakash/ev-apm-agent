@@ -1,0 +1,36 @@
+﻿version: "3.9"
+
+services:
+  replay:
+    build:
+      context: ./replay
+      dockerfile: Dockerfile
+    container_name: evapm-replay
+    ports:
+      - "8001:8000"
+    networks:
+      - evapm-net
+
+  detector:
+    build:
+      context: ./detector
+      dockerfile: Dockerfile
+    container_name: evapm-detector
+    ports:
+      - "8002:8000"
+    networks:
+      - evapm-net
+
+  ui:
+    build:
+      context: ./ui
+      dockerfile: Dockerfile
+    container_name: evapm-ui
+    ports:
+      - "8003:8000"
+    networks:
+      - evapm-net
+
+networks:
+  evapm-net:
+    driver: bridge

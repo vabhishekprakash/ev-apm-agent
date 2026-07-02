@@ -1,46 +1,85 @@
-﻿# Data files
-data/*.csv
-data/*.parquet
-data/**/*.csv
-data/**/*.parquet
+﻿# ===== Data — never commit raw or intermediate CSMS data =====
+data/raw/*
+data/interim/*
+data/processed/*
+*.csv
+*.parquet
+*.feather
+*.h5
+# Keep folder skeletons and docs committed even though their contents are ignored:
+!data/raw/.gitkeep
+!data/raw/EXPORT_NOTES.md
+!data/interim/.gitkeep
+!data/processed/.gitkeep
+# Allow inventory/reference CSVs to be committed explicitly:
+!data/reference/*.csv
 
-# Python
+# ===== Model artifacts =====
+*.pkl
+*.joblib
+*.pt
+*.pth
+*.onnx
+models/*.bin
+!models/.gitkeep
+
+# ===== Secrets & environment =====
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+secrets/
+credentials.json
+
+# ===== Python =====
 __pycache__/
 *.py[cod]
 *$py.class
 *.so
+.Python
 .venv/
 venv/
-.env
-.env.*
+env/
+ENV/
+build/
+dist/
+*.egg-info/
+.eggs/
+pip-wheel-metadata/
 
-# Model artifacts
-*.pkl
-*.joblib
-*.onnx
-*.pt
-*.pth
-*.h5
-*.safetensors
-models/*.bin
-layer2/artifacts/
-layer2/checkpoints/
-
-# Jupyter
+# ===== Jupyter =====
 .ipynb_checkpoints/
-*.ipynb_checkpoints
+*/.ipynb_checkpoints/*
+# Optional: strip notebook outputs before commit
+# *.ipynb
 
-# IDE
-.vscode/*
-!.vscode/settings.json
+# ===== Testing / linting / type-checking =====
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+.tox/
+
+# ===== Docker =====
+*.pid
+docker-compose.override.yml
+
+# ===== IDE / editor =====
+.vscode/
 .idea/
 *.swp
 *.swo
-
-# OS
 .DS_Store
 Thumbs.db
 
-# Logs
+# ===== Logs & temp =====
 *.log
 logs/
+tmp/
+*.tmp
+
+# ===== Local overrides =====
+local_config.py
+config.local.yaml
