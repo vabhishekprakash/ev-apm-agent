@@ -13,6 +13,8 @@ data/processed/*
 !data/processed/.gitkeep
 # Allow inventory/reference CSVs to be committed explicitly:
 !data/reference/*.csv
+# Synthetic test fixtures (no CSMS data) are safe to commit:
+!tests/fixtures/**/*.csv
 
 # ===== Model artifacts =====
 *.pkl
