@@ -1,0 +1,11 @@
+connector_pk,status,error_code,timestamp
+4784325,Preparing,NoError,"2026-05-15 09:49:55"
+4784325,Charging,NoError,"2026-05-15 09:50:05"
+4784325,Charging,system-err1051,"2026-05-15 10:00:00"
+4784325,Finishing,system-err1051,"2026-05-15 10:00:04"
+4784325,Available,NoError,"2026-05-15 10:00:18"
+5802030,Preparing,NoError,"2026-05-15 09:54:55"
+5802030,Charging,NoError,"2026-05-15 09:55:05"
+5802030,Charging,system-err1051,"2026-05-15 10:07:00"
+5802030,Finishing,system-err1051,"2026-05-15 10:07:04"
+5802030,Available,NoError,"2026-05-15 10:07:18"
