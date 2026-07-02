@@ -18,6 +18,9 @@ data/processed/*
 
 # ===== Model artifacts =====
 *.pkl
+# Trained artifacts under models/ ship with the repo (SPEC §4.3 — training on
+# Akhil's machine, inference anywhere):
+!models/*.pkl
 *.joblib
 *.pt
 *.pth
