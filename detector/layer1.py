@@ -30,6 +30,11 @@ TRANSIENT_THRESHOLD_SECONDS = 15.0
 # Any non-IDLE dwell longer than this means the sequence stalled; reset.
 STUCK_STATE_TIMEOUT_SECONDS = 60.0
 
+# Observed meter cadence is ~30s; 3× that with no MeterValues during an
+# active session is the silence-fault signature (SPEC Day 5, §3.5).
+# Overridable via the SILENCE_THRESHOLD_SECONDS env var (see .env.example).
+DEFAULT_SILENCE_THRESHOLD_SECONDS = 90.0
+
 Event = StatusNotification | MeterValues | StartTransaction | StopTransaction
 
 
@@ -45,6 +50,13 @@ class FaultAlert:
     stage: str = "final"
     # None until recovery observed; used to classify transient vs dispatch.
     recovered_after_seconds: float | None = None
+    fault_code: str | None = None
+    mechanism: str | None = None
+    # Detectors without a recovery signal (err1024, silence) set this instead
+    # of deriving the classification from recovered_after_seconds.
+    classification_override: str | None = None
+    # Silence detector only: how long the session had been quiet when fired.
+    silence_seconds: float | None = None
 
     @property
     def is_transient(self) -> bool:
@@ -56,19 +68,26 @@ class FaultAlert:
 
     @property
     def classification(self) -> str:
+        if self.classification_override is not None:
+            return self.classification_override
         if self.recovered_after_seconds is None:
             return "unclassified"
         return "transient" if self.is_transient else "technician-dispatch"
 
     def to_dict(self) -> dict:
-        return {
+        payload = {
             "detector_source": self.detector,
             "connector_pk": self.connector_pk,
             "fired_at": self.fired_at.isoformat(),
             "stage": self.stage,
+            "fault_code": self.fault_code,
+            "mechanism": self.mechanism,
             "recovery_seconds": self.recovered_after_seconds,
             "classification": self.classification,
         }
+        if self.silence_seconds is not None:
+            payload["silence_seconds"] = self.silence_seconds
+        return payload
 
 
 class Err1051State(Enum):
@@ -158,6 +177,8 @@ class Err1051Detector:
                 fired_at=msg.timestamp,
                 stage="final",
                 recovered_after_seconds=recovery,
+                fault_code="err1051",
+                mechanism="internal socket init failure",
             )
             self.reset()
             return alert
@@ -180,6 +201,8 @@ class Err1051Detector:
                 connector_pk=self.connector_pk,
                 fired_at=msg.stop_timestamp,
                 stage="candidate",
+                fault_code="err1051",
+                mechanism="internal socket init failure",
             )
         return None
 
@@ -198,36 +221,96 @@ class Err1024Detector:
     SLAC handshake failure happens pre-charge, so there may be no transaction
     open. Sequencing questions (StartTransaction ordering, retry bursts,
     recovery signal) are still under investigation — SPEC §7 item 1.
+
+    TODO(data-owner): once the err1024 escalation reply lands, extend with the
+    confirmed retry sequence / recovery-time signal (SPEC Day 5 Task 1).
+    Until then every sighting fires, including retry bursts.
     """
+
+    DETECTOR_NAME = "err1024"
 
     def __init__(self, connector_pk: int) -> None:
         self.connector_pk = connector_pk
 
+    def consume(self, event: Event) -> FaultAlert | None:
+        if isinstance(event, StatusNotification):
+            return self.on_status(event)
+        return None
+
     def on_status(self, msg: StatusNotification) -> FaultAlert | None:
-        raise NotImplementedError
+        if msg.error_code != ERR_1024:
+            return None
+        return FaultAlert(
+            detector=self.DETECTOR_NAME,
+            connector_pk=self.connector_pk,
+            fired_at=msg.timestamp,
+            fault_code="err1024",
+            mechanism="SLAC handshake timeout",
+            classification_override="technician-dispatch-likely",
+        )
+
 
 class TelemetrySilenceDetector:
     """Flags an active session that has gone >threshold with no MeterValues.
 
     Driven by a clock tick rather than events alone, since silence is the
-    absence of events.
+    absence of events. The tick clock is event time supplied by the caller
+    (main.py ticks with every stream event's timestamp, including Heartbeats
+    and other connectors' traffic), so REPLAY_SPEED_MULTIPLIER=0 works.
+    Fires once per silent stretch; a fresh MeterValues re-arms it.
     """
 
-    def __init__(self, connector_pk: int, threshold_seconds: float) -> None:
+    DETECTOR_NAME = "telemetry_silence"
+
+    def __init__(
+        self,
+        connector_pk: int,
+        threshold_seconds: float = DEFAULT_SILENCE_THRESHOLD_SECONDS,
+    ) -> None:
         self.connector_pk = connector_pk
         self.threshold_seconds = threshold_seconds
         self.session_open = False
         self.last_meter_at: datetime | None = None
+        self.alerted = False
+
+    def consume(self, event: Event) -> None:
+        if isinstance(event, StartTransaction):
+            self.on_start_transaction(event)
+        elif isinstance(event, MeterValues):
+            self.on_meter_values(event)
+        elif isinstance(event, StopTransaction):
+            self.on_stop_transaction(event)
 
     def on_start_transaction(self, msg: StartTransaction) -> None:
-        raise NotImplementedError
+        self.session_open = True
+        # No MeterValues yet; the session open is the baseline for silence.
+        self.last_meter_at = msg.start_timestamp
+        self.alerted = False
 
     def on_meter_values(self, msg: MeterValues) -> None:
-        raise NotImplementedError
+        if self.session_open:
+            self.last_meter_at = msg.timestamp
+            self.alerted = False  # telemetry resumed — re-arm
 
     def on_stop_transaction(self, msg: StopTransaction) -> None:
-        raise NotImplementedError
+        self.session_open = False
+        self.last_meter_at = None
+        self.alerted = False
 
     def on_tick(self, now: datetime) -> FaultAlert | None:
         """Check silence duration against threshold at the current clock."""
-        raise NotImplementedError
+        if not self.session_open or self.alerted or self.last_meter_at is None:
+            return None
+        silent_for = (now - self.last_meter_at).total_seconds()
+        if silent_for <= self.threshold_seconds:
+            return None
+        self.alerted = True
+        return FaultAlert(
+            detector=self.DETECTOR_NAME,
+            connector_pk=self.connector_pk,
+            fired_at=now,
+            fault_code="telemetry_silence",
+            mechanism=f"no MeterValues for >{self.threshold_seconds:.0f}s during active session",
+            classification_override="investigate",
+            silence_seconds=silent_for,
+        )
