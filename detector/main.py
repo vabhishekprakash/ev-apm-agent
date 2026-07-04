@@ -202,6 +202,10 @@ def emit(alert, counts: dict) -> None:
     payload = alert if isinstance(alert, dict) else alert.to_dict()
     payload.update(CONNECTOR_INVENTORY.get(payload.get("connector_pk"), {}))
     sink_alert(PRIORITIZER.prioritize(payload))
+    # Alerts are rare; refreshing counters on each keeps the UI header live
+    # even on short demo streams (the compose tail never EOFs, so the
+    # end-of-stream report never fires there).
+    report_stats(counts)
 
 
 def score_session_close(event: StopTransaction, session: dict, counts: dict) -> None:

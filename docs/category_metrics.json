@@ -94,8 +94,8 @@
   },
   {
     "stream": "capped 90-day export",
-    "provenance": "real export (fault rows absent \u2014 cap)",
-    "total_alerts": 281,
+    "provenance": "real export (344 fault rows: UnderVoltage/PowerMeterFailure/EVCommunicationError/OtherError; err1051/err1024 sequences absent)",
+    "total_alerts": 275,
     "categories": [
       {
         "category": "UnderVoltage",
@@ -111,11 +111,11 @@
       {
         "category": "layer2_drift",
         "events_observed": null,
-        "alerts": 34,
+        "alerts": 28,
         "detection_rate": null,
         "priority_distribution": {
-          "P3": 8,
-          "P2": 26
+          "P3": 7,
+          "P2": 21
         },
         "time_to_alert_s": null,
         "note": "session-close scoring"
