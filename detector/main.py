@@ -18,10 +18,11 @@ Usage:
 """
 
 import csv
+import http.client
 import json
 import os
 import sys
-import urllib.request
+import urllib.parse
 from datetime import datetime
 from pathlib import Path
 
@@ -40,6 +41,45 @@ SILENCE_THRESHOLD_SECONDS = float(
 )
 ALERT_SINK = os.environ.get("ALERT_SINK", "stdout")
 ALERT_URL = os.environ.get("ALERT_URL", "http://ui:8000/alerts")
+UI_BASE = ALERT_URL.rsplit("/", 1)[0]
+STATS_EVERY_EVENTS = 100
+
+_http_conn: http.client.HTTPConnection | None = None
+
+
+def _connection() -> http.client.HTTPConnection:
+    global _http_conn
+    if _http_conn is None:
+        host = urllib.parse.urlsplit(UI_BASE).netloc
+        _http_conn = http.client.HTTPConnection(host, timeout=5)
+    return _http_conn
+
+
+def post_json(url: str, payload: dict) -> bool:
+    """POST over one persistent keep-alive connection — the detector emits an
+    alert/session/stats call per event batch, and a fresh TCP handshake per
+    POST stalls the whole single-threaded stream (review finding)."""
+    global _http_conn
+    path = urllib.parse.urlsplit(url).path
+    body = json.dumps(payload)
+    for attempt in (1, 2):  # one reconnect on a stale/broken connection
+        try:
+            conn = _connection()
+            conn.request("POST", path, body=body,
+                         headers={"Content-Type": "application/json"})
+            response = conn.getresponse()
+            response.read()  # drain so the connection can be reused
+            if response.status < 400:
+                return True
+            print(f"warning: POST {path} -> {response.status}", file=sys.stderr)
+            return False
+        except OSError as exc:
+            if _http_conn is not None:
+                _http_conn.close()
+            _http_conn = None
+            if attempt == 2:
+                print(f"warning: POST {url} failed ({exc})", file=sys.stderr)
+    return False
 
 
 def load_connector_inventory() -> dict[int, dict]:
@@ -85,19 +125,23 @@ LAYER2 = load_layer2()
 
 
 def sink_alert(payload: dict) -> None:
+    if ALERT_SINK == "http" and post_json(ALERT_URL, payload):
+        return
     if ALERT_SINK == "http":
-        request = urllib.request.Request(
-            ALERT_URL,
-            data=json.dumps(payload).encode(),
-            headers={"Content-Type": "application/json"},
-        )
-        try:
-            urllib.request.urlopen(request, timeout=5)
-            return
-        except OSError as exc:
-            print(f"warning: alert POST failed ({exc}), falling back to stdout",
-                  file=sys.stderr)
+        print("warning: falling back to stdout", file=sys.stderr)
     print(json.dumps(payload), flush=True)
+
+
+def report_session(record: dict) -> None:
+    """Per-closed-session record for the UI drift panel (http mode only —
+    stdout mode keeps the pipe clean for alerts)."""
+    if ALERT_SINK == "http":
+        post_json(f"{UI_BASE}/sessions", record)
+
+
+def report_stats(counts: dict) -> None:
+    if ALERT_SINK == "http":
+        post_json(f"{UI_BASE}/stats", counts)
 
 
 def parse_event(raw: dict):
@@ -176,6 +220,17 @@ def score_session_close(event: StopTransaction, session: dict, counts: dict) -> 
         return
     raw_score, flagged = result
     counts["sessions_scored"] += 1
+    # Every scored session feeds the UI drift panel, flagged or not — the
+    # trend line needs the healthy sessions too.
+    report_session({
+        "connector_pk": event.connector_pk,
+        "closed_at": event.stop_timestamp.isoformat(),
+        "duration_sec": duration,
+        "start_hour": features["start_hour"],
+        "anomaly_score": round(raw_score, 4),
+        "flagged": flagged,
+        "layer2_threshold": LAYER2.threshold,
+    })
     if flagged:
         counts["layer2_flagged"] += 1
         emit({
@@ -216,6 +271,8 @@ def main() -> None:
         if not line:
             continue
         counts["events"] += 1
+        if counts["events"] % STATS_EVERY_EVENTS == 0:
+            report_stats(counts)
         try:
             raw = json.loads(line)
             event = parse_event(raw)
@@ -263,6 +320,7 @@ def main() -> None:
                                 open_sessions, alert.connector_pk
                             )
 
+    report_stats(counts)  # final counters after the stream drains
     if counts["sessions_scored"]:
         rate = counts["layer2_flagged"] / counts["sessions_scored"]
         print(
