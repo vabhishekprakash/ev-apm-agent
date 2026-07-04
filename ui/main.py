@@ -11,6 +11,7 @@ the buffer. ALERT_BUFFER_SIZE caps the ring buffer (default 500).
 import os
 from collections import deque
 from datetime import datetime, timezone
+from itertools import islice
 
 from fastapi import FastAPI, Request
 from fastapi.responses import HTMLResponse
@@ -38,8 +39,11 @@ async def receive_alerts(request: Request):
 
 
 @app.get("/alerts")
-def list_alerts(limit: int = 100):
-    return list(alerts)[-limit:][::-1]  # newest first
+async def list_alerts(limit: int = 100):
+    # async keeps this on the event loop with the POST handler — a sync def
+    # would run in the threadpool and race the deque appends (CPython raises
+    # "deque mutated during iteration"). islice touches only `limit` entries.
+    return list(islice(reversed(alerts), max(limit, 0)))  # newest first
 
 
 PAGE = """<!doctype html>
