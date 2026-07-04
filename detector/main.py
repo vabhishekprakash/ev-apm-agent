@@ -29,12 +29,15 @@ from pathlib import Path
 from ocpp_messages import MeterValues, StartTransaction, StatusNotification, StopTransaction
 from layer1 import (
     DEFAULT_SILENCE_THRESHOLD_SECONDS,
+    CategoryPointDetector,
     Err1024Detector,
     Err1051Detector,
     TelemetrySilenceDetector,
+    make_category_detectors,
 )
 from layer2 import Layer2Anomaly
 from prioritizer import AlertPrioritizer
+from vendor_code_normalizer import normalize
 
 SILENCE_THRESHOLD_SECONDS = float(
     os.environ.get("SILENCE_THRESHOLD_SECONDS", DEFAULT_SILENCE_THRESHOLD_SECONDS)
@@ -178,11 +181,13 @@ def parse_event(raw: dict):
 
 
 def make_detectors(connector_pk: int) -> list:
-    """All three Layer 1 sub-detectors, run in parallel per connector."""
+    """All Layer 1 sub-detectors, run in parallel per connector: the Week 1
+    trio plus the Day 4 category point-detectors."""
     return [
         Err1051Detector(connector_pk),
         Err1024Detector(connector_pk),
         TelemetrySilenceDetector(connector_pk, SILENCE_THRESHOLD_SECONDS),
+        *make_category_detectors(connector_pk),
     ]
 
 
@@ -286,6 +291,11 @@ def main() -> None:
             counts["skipped"] += 1
         else:
             counts["routed"] += 1
+            # Canonical OCPP category for fault routing (Day 4 Task 3): the
+            # normalizer collapses vendor strings onto the standard buckets.
+            canonical = None
+            if isinstance(event, StatusNotification) and event.error_code != "NoError":
+                canonical = normalize(raw.get("vendor_error_code"), event.error_code)
             if isinstance(event, StartTransaction):
                 open_sessions[event.transaction_pk] = {
                     "connector_pk": event.connector_pk,
@@ -295,7 +305,10 @@ def main() -> None:
             for detector in detectors.setdefault(
                 event.connector_pk, make_detectors(event.connector_pk)
             ):
-                alert = detector.consume(event)
+                if isinstance(detector, CategoryPointDetector):
+                    alert = detector.consume(event, canonical)
+                else:
+                    alert = detector.consume(event)
                 if alert is not None:
                     emit(alert, counts)
                     flag_connector_sessions(open_sessions, event.connector_pk)

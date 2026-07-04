@@ -54,6 +54,7 @@ def test_err1024_fires_on_sight_with_mechanism_and_classification():
         "fired_at": at(0).isoformat(),
         "stage": "final",
         "fault_code": "err1024",
+        "fault_category": None,
         "mechanism": "SLAC handshake timeout",
         "recovery_seconds": None,
         "classification": "technician-dispatch-likely",
