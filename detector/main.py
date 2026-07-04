@@ -33,6 +33,7 @@ from layer1 import (
     TelemetrySilenceDetector,
 )
 from layer2 import Layer2Anomaly
+from prioritizer import AlertPrioritizer
 
 SILENCE_THRESHOLD_SECONDS = float(
     os.environ.get("SILENCE_THRESHOLD_SECONDS", DEFAULT_SILENCE_THRESHOLD_SECONDS)
@@ -141,11 +142,17 @@ def make_detectors(connector_pk: int) -> list:
     ]
 
 
+PRIORITIZER = AlertPrioritizer()
+
+
 def emit(alert, counts: dict) -> None:
+    """Single alert egress: FaultAlert or raw dict -> enrich -> prioritize ->
+    sink. Every alert reaching the UI carries priority_tier / priority_score /
+    deciding_signal (Week 2 Day 1 Task 2)."""
     counts["alerts"] += 1
-    payload = alert.to_dict()
+    payload = alert if isinstance(alert, dict) else alert.to_dict()
     payload.update(CONNECTOR_INVENTORY.get(payload.get("connector_pk"), {}))
-    sink_alert(payload)
+    sink_alert(PRIORITIZER.prioritize(payload))
 
 
 def score_session_close(event: StopTransaction, session: dict, counts: dict) -> None:
@@ -171,7 +178,7 @@ def score_session_close(event: StopTransaction, session: dict, counts: dict) -> 
     counts["sessions_scored"] += 1
     if flagged:
         counts["layer2_flagged"] += 1
-        payload = {
+        emit({
             "detector_source": "layer2_drift",
             "connector_pk": event.connector_pk,
             "fired_at": event.stop_timestamp.isoformat(),
@@ -182,10 +189,10 @@ def score_session_close(event: StopTransaction, session: dict, counts: dict) -> 
             "classification": "drift-anomaly",
             "anomaly_score": round(raw_score, 4),
             "layer2_threshold": LAYER2.threshold,
-        }
-        payload.update(CONNECTOR_INVENTORY.get(event.connector_pk, {}))
-        counts["alerts"] += 1
-        sink_alert(payload)
+        }, counts)
+    else:
+        # Clean close breaks the consecutive-drift streak (prioritizer rule).
+        PRIORITIZER.record_clean_session(event.connector_pk)
 
 
 def flag_connector_sessions(open_sessions: dict, connector_pk: int) -> None:
