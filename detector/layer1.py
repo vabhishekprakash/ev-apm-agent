@@ -51,6 +51,9 @@ class FaultAlert:
     # None until recovery observed; used to classify transient vs dispatch.
     recovered_after_seconds: float | None = None
     fault_code: str | None = None
+    # Canonical OCPP category (vendor_code_normalizer) — prioritizer rules
+    # and the UI category rollups key on this.
+    fault_category: str | None = None
     mechanism: str | None = None
     # Detectors without a recovery signal (err1024, silence) set this instead
     # of deriving the classification from recovered_after_seconds.
@@ -81,6 +84,7 @@ class FaultAlert:
             "fired_at": self.fired_at.isoformat(),
             "stage": self.stage,
             "fault_code": self.fault_code,
+            "fault_category": self.fault_category,
             "mechanism": self.mechanism,
             "recovery_seconds": self.recovered_after_seconds,
             "classification": self.classification,
@@ -282,6 +286,56 @@ class Err1024Detector:
             mechanism="SLAC handshake timeout",
             classification_override="technician-dispatch-likely",
         )
+
+
+class CategoryPointDetector:
+    """Point-event handler for one canonical OCPP category (Week 2 Day 4).
+
+    Fires a FaultAlert whenever a StatusNotification's canonical category
+    (vendor_code_normalizer output, attached by main.py as
+    msg_canonical_category) matches. Escalation logic — WeakSignal bursts,
+    Under/OverVoltage 24h repeats, GroundFailure straight to P1 — lives in
+    AlertPrioritizer's rules, keyed on the fault_category field this detector
+    stamps; keeping the detectors stateless avoids duplicating that state.
+
+    Real-event verification pending the fault-event export (audit: the capped
+    status export carries no fault rows) — fixture-verified meanwhile.
+    """
+
+    def __init__(self, connector_pk: int, categories: tuple[str, ...],
+                 detector_name: str, mechanism: str) -> None:
+        self.connector_pk = connector_pk
+        self.categories = categories
+        self.detector_name = detector_name
+        self.mechanism = mechanism
+
+    def consume(self, event: Event, canonical_category: str | None = None) -> FaultAlert | None:
+        if not isinstance(event, StatusNotification) or canonical_category is None:
+            return None
+        if canonical_category not in self.categories:
+            return None
+        return FaultAlert(
+            detector=self.detector_name,
+            connector_pk=self.connector_pk,
+            fired_at=event.timestamp,
+            fault_code=canonical_category,
+            fault_category=canonical_category,
+            mechanism=self.mechanism,
+            classification_override="unclassified",
+        )
+
+
+def make_category_detectors(connector_pk: int) -> list:
+    """The Day 4 category point-detectors: WeakSignal, GroundFailure,
+    Under/OverVoltage (combined handler per SPEC)."""
+    return [
+        CategoryPointDetector(connector_pk, ("WeakSignal",),
+                              "weak_signal", "modem signal degradation"),
+        CategoryPointDetector(connector_pk, ("GroundFailure",),
+                              "ground_failure", "ground fault — electrical safety"),
+        CategoryPointDetector(connector_pk, ("UnderVoltage", "OverVoltage"),
+                              "voltage", "supply voltage out of band"),
+    ]
 
 
 class TelemetrySilenceDetector:
