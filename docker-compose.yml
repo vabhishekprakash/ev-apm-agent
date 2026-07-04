@@ -3,12 +3,15 @@ services:
   # stdout to each other, so replay appends to a file on the shared event-bus
   # volume and the detector tails it. Same contract as the local
   # `python replay/main.py | python detector/main.py` pipeline.
+  # Append-only ('>>'): a '>' truncation on replay restart would make the
+  # detector's tail -F re-read from byte 0 and reprocess all history as
+  # duplicate alerts. Reset the bus between demos with `docker compose down -v`.
   replay:
     build:
       context: ./replay
       dockerfile: Dockerfile
     container_name: evapm-replay
-    command: sh -c "python main.py > /bus/events.jsonl"
+    command: sh -c "python main.py >> /bus/events.jsonl"
     environment:
       DATA_DIR: ${DATA_DIR:-/app/data/raw}
       REPLAY_SPEED_MULTIPLIER: ${REPLAY_SPEED_MULTIPLIER:-1}
