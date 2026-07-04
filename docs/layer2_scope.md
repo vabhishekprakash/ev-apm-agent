@@ -28,8 +28,31 @@ and which fall back to the pooled cohort baseline.
   construction; do not read their tier as a health signal.
 - Drop the single `connectorId=0` session on PRABHAEV004N from all training.
 
+## Decision update (Week 2 Day 1, 2026-07-04) — cohort vs global pooling
+
+**Settled: hybrid.** Vendor families with ≥50 pooled-tier sessions keep their
+own cohort Isolation Forest; thinner families (`prabhaev1` n=1, `acs285`
+n=44) and any family unseen at inference route to a **global pooled model**
+trained on the whole pooled tier (n=587, per-connector cap applied).
+Implemented in notebook 03 + `Layer2Anomaly._model_file_for` fallback.
+
+Verification (notebook 04): pooled-tier duration distributions per family are
+coherent/unimodal for the ≥50-session families — cohorting holds for them;
+below that the "cohort" was one connector's noise (the first training run
+produced a prabhaev1 model trained on a single session).
+
+## FPR measurement status (headline metric)
+
+Chronological 80/20 holdout (most recent 20% per connector, notebook 04):
+**overall FPR 3.62%** at the deployed threshold −0.1187 (5.26% at the SPEC
+default −0.1), n = 2,015 held-out normals. Per-tier: heavy 3.3% / medium
+3.5% / light 3.2% / pooled-tier 6.1% (n=148). Watch-list: `siemens` family
+10.5% (n=76). Random-split calibration reference: 4.02% (notebook 03).
+
 ## Open
 
-- Cutoffs are Week 1 heuristics; revisit after the first false-positive-rate
-  measurement on held-out normal sessions (the headline metric — no held-out
-  fault set exists).
+- Feature vector is still `duration_sec` + `start_hour` (audit flags 6/11 —
+  measurand re-export pending, temperature field dead). Re-run notebooks 03/04
+  when richer features land.
+- Pooled-tier FPR (6.1%, n=148) exceeds the bar on a small sample — recheck
+  after the full export.
