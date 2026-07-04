@@ -54,27 +54,38 @@ def _normalize_location(raw: object) -> str | None:
     return _LOCATION_ALIASES.get(key)
 
 
+def _sample_ts(sample: dict) -> datetime | None:
+    """Timestamp of one sampledValue row, coerced per the module contract
+    (datetime or ISO string); None when missing or unparseable — such rows
+    are skipped rather than crashing the sort (review finding)."""
+    raw = sample.get("timestamp")
+    if isinstance(raw, datetime):
+        return raw
+    if isinstance(raw, str):
+        try:
+            return datetime.fromisoformat(raw)
+        except ValueError:
+            return None
+    return None
+
+
 def _temperature_series(session_meter_values: list) -> dict[str, list[tuple]]:
     """Group Temperature samples by normalized location, sorted by timestamp.
 
-    Returns {"body"|"outlet_1"|"outlet_2": [(timestamp, value), ...]};
-    locations with no samples are absent. Non-Temperature rows, unknown
-    locations, and unparseable values are skipped.
+    Location-grouping over _measurand_series so the sample-parsing rules
+    (value coercion, timestamp validation, skip-on-bad-row) live in exactly
+    one place. Returns {"body"|"outlet_1"|"outlet_2": [(ts, value), ...]};
+    locations with no samples are absent.
     """
     series: dict[str, list[tuple]] = {}
-    for sample in session_meter_values:
-        if sample.get("measurand") != TEMPERATURE_MEASURAND:
-            continue
-        location = _normalize_location(sample.get("location"))
-        if location is None:
-            continue
-        try:
-            value = float(sample["value"])
-        except (KeyError, TypeError, ValueError):
-            continue
-        series.setdefault(location, []).append((sample.get("timestamp"), value))
-    for samples in series.values():
-        samples.sort(key=lambda pair: pair[0])
+    for location_key in set(
+        _normalize_location(s.get("location")) for s in session_meter_values
+    ) - {None}:
+        rows = [s for s in session_meter_values
+                if _normalize_location(s.get("location")) == location_key]
+        samples = _measurand_series(rows, TEMPERATURE_MEASURAND)
+        if samples:
+            series[location_key] = samples
     return series
 
 
@@ -133,11 +144,14 @@ def _measurand_series(session_meter_values: list, measurand: str) -> list[tuple]
     for sample in session_meter_values:
         if sample.get("measurand") != measurand:
             continue
+        ts = _sample_ts(sample)
+        if ts is None:
+            continue
         try:
             value = float(sample["value"])
         except (KeyError, TypeError, ValueError):
             continue
-        series.append((sample.get("timestamp"), value))
+        series.append((ts, value))
     series.sort(key=lambda pair: pair[0])
     return series
 
