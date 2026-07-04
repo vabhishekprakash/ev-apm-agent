@@ -1,0 +1,48 @@
+%% EV APM Agent — runtime topology v2 (Week 2 close)
+%% Render: mmdc -i architecture_v2.mmd -o architecture_v2.svg
+%% (architecture_v2.svg in this repo is drawn from this source)
+flowchart LR
+    subgraph inputs [Event sources]
+        CMS[CMS event stream<br/>production: poll / queue / webhook]:::dashed
+        REPLAY[Replay harness<br/>anonymized CSV -> JSON lines<br/>REPLAY_SPEED_MULTIPLIER]
+    end
+
+    subgraph detector [Detector service]
+        NORM[Vendor code normalizer<br/>17.5k vendor codes -> 19 OCPP buckets]
+        subgraph L1 [Layer 1 — deterministic]
+            E1051[err1051 state machine<br/>recovery classification]
+            E1024[err1024 point event]
+            SIL[telemetry-silence 90s]
+            CAT[category point detectors<br/>WeakSignal / GroundFailure / U-OVoltage]
+        end
+        TRACK[Session tracker<br/>open txns, fault-flag marking]
+        subgraph L2 [Layer 2 — drift on session close]
+            FEAT[feature extractor] --> ISO[IsolationForest per connector 22<br/>vendor-family pools 4 + global pool]
+        end
+        PRIO[Alert prioritizer<br/>P1/P2/P3 + deciding signal<br/>bursts, 24h repeats, drift streaks]
+    end
+
+    subgraph outputs [Alert sinks]
+        UI[UI service :8000<br/>tiered feed, coverage chips,<br/>drift panel, stats header]
+        STDOUT[stdout JSON lines]:::dashed
+        PROD[Slack / PagerDuty / CMS write API<br/>production]:::dashed
+    end
+
+    subgraph training [Offline training — Akhil's machine]
+        NS[normal_sessions.csv +<br/>recovered PRABHAEV004N history] --> NB[notebooks 03-05<br/>chronological holdout, threshold calibration,<br/>expanded-normal gate]
+        NB --> PKL[models/*.pkl committed<br/>+ index, threshold -0.1187]
+    end
+
+    CMS -.-> NORM
+    REPLAY -->|event bus volume / stdin pipe| NORM
+    NORM --> L1
+    NORM --> TRACK
+    TRACK -->|unflagged close| L2
+    L1 --> PRIO
+    L2 --> PRIO
+    PRIO -->|POST /alerts, /sessions, /stats| UI
+    PRIO -.-> STDOUT
+    PRIO -.-> PROD
+    PKL -.->|loaded at start| ISO
+
+    classDef dashed stroke-dasharray: 5 5;
