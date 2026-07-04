@@ -74,7 +74,7 @@ Every number below passed the honesty audit (bottom of file).
 | Claim | Status |
 |---|---|
 | "Behavior proxy, not battery diagnostics" | Framing locked on slide 3; nothing in slides 4–7 crosses it. |
-| No "predictive maintenance" headline | Absent. Drift panel is "degradation tracking"; lead-time claim deferred to the Day 5 analysis — **do not** add before it lands. |
+| No "predictive maintenance" headline | Absent. Drift panel is "degradation tracking". **Day 5 verdict: the lead-time analysis came back negative (lift 0.57× — docs/layer2_leadtime.md); the pitch line is "orthogonal degradation tracking", permanently, unless richer features change the result.** |
 | No per-category precision/recall | None claimed anywhere — no held-out fault set exists. FPR is the only quantitative claim. |
 | FPR 3.62% | Measured, chronological holdout, notebook 04, n=2,015. Deployed threshold −0.1187. Defensible by both presenters. |
 | "2.77M fault events / 19 categories" | From the CMS taxonomy table cited in the Week 2 spec; **Errornotify.csv not yet delivered to the repo** — slide carries "per CMS error taxonomy" provenance until it lands. Framed as "operates across the observed fault taxonomy", NOT "trained on 2.77M faults". |

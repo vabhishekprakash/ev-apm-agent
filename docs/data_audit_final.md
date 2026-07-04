@@ -139,3 +139,25 @@ path) — encoded as a Layer 1 sub-detector.
     100% export-truncation artifacts.** The detector logic is validated by
     unit tests and fixtures; artifact alerts will disappear with the
     date-bounded re-export (flag 5).
+
+### Week 2 final refresh (2026-07-04, file renamed from data_audit_v0.md)
+
+14. **Headline FPR locked:** 3.62% on the chronological per-connector 80/20
+    holdout at the deployed threshold −0.1187 (notebook 04, n=2,015);
+    per-tier heavy 3.3 / medium 3.5 / light 3.2 / pooled-tier 6.1%
+    (n=148); `siemens` family 10.5% (n=76) on the watch list.
+15. **Category coverage:** Layer 1 detects the 6 target categories (err1051,
+    err1024, telemetry-silence, WeakSignal, GroundFailure, Under/OverVoltage)
+    — fixture-verified end-to-end with prioritizer escalations
+    (docs/category_metrics.md); real-event verification blocked on the
+    fault-event export (data/sql/fault_events.sql, request pending).
+16. **Taxonomy delivery still pending:** Errornotify.csv (19 OCPP categories,
+    2.77M occurrences, ~17.5k vendor codes per the Week 2 spec) has not
+    landed; the vendor-code normalizer's hex/family lookup tables and the
+    coverage measurement (scripts/normalizer_coverage.py) await it.
+17. **Lead-time analysis (docs/layer2_leadtime.md):** drift flags do NOT
+    precede fault episodes on the current feature set (lift 0.57×, and
+    pre-fault windows cover 73% of sessions on the test station) — Layer 2
+    is framed as orthogonal degradation tracking. Expanded-normal retrain
+    for 2009529/2009530 shipped after passing the FPR gate
+    (1.74%→1.16% / 2.84%→2.84%).
