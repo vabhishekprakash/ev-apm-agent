@@ -1,0 +1,68 @@
+"""Capture the 20-second hook clip as an animated GIF (issue #22).
+
+Drives the REAL dashboard in headless Chromium while the demo fixture streams
+through the detector, screenshotting each poll cycle — nothing is mocked. The
+GIF is the video thumbnail / opening hook (docs/demo_script.md Task 3); the
+narrated recording itself is a Week 3 human task.
+
+Usage: py scripts/capture_hook_gif.py   (needs playwright + chromium installed)
+Output: docs/assets/hook_selfrecovery.gif
+"""
+
+import os
+import subprocess
+import sys
+import time
+from pathlib import Path
+
+from PIL import Image
+from playwright.sync_api import sync_playwright
+
+ROOT = Path(__file__).resolve().parent.parent
+OUT = ROOT / "docs" / "assets" / "hook_selfrecovery.gif"
+PORT = 8055
+FRAME_EVERY_S = 0.8
+FRAMES = 26
+
+
+def main() -> None:
+    env = {**os.environ}
+    ui = subprocess.Popen(
+        [sys.executable, "-m", "uvicorn", "main:app", "--port", str(PORT),
+         "--log-level", "warning"],
+        cwd=ROOT / "ui", env=env)
+    try:
+        time.sleep(4)
+        # fault story at 12x so the feed builds over ~20s of wall clock
+        replay = subprocess.Popen(
+            [sys.executable, str(ROOT / "replay" / "main.py")],
+            stdout=subprocess.PIPE, env={**env,
+                "DATA_DIR": str(ROOT / "tests" / "fixtures" / "demo_replay"),
+                "REPLAY_SPEED_MULTIPLIER": "45"})
+        detector = subprocess.Popen(
+            [sys.executable, "main.py"], stdin=replay.stdout,
+            cwd=ROOT / "detector", env={**env, "ALERT_SINK": "http",
+                "ALERT_URL": f"http://localhost:{PORT}/alerts"})
+
+        frames = []
+        with sync_playwright() as p:
+            browser = p.chromium.launch()
+            page = browser.new_page(viewport={"width": 1280, "height": 720})
+            page.goto(f"http://localhost:{PORT}/")
+            for i in range(FRAMES):
+                time.sleep(FRAME_EVERY_S)
+                frames.append(Image.open(
+                    __import__("io").BytesIO(page.screenshot())).convert("P",
+                                                                         palette=Image.ADAPTIVE))
+            browser.close()
+        detector.terminate(), replay.terminate()
+
+        frames[0].save(OUT, save_all=True, append_images=frames[1:],
+                       duration=int(FRAME_EVERY_S * 1000), loop=0, optimize=True)
+        print(f"wrote {OUT} ({OUT.stat().st_size // 1024} KB, {len(frames)} frames)")
+    finally:
+        ui.terminate()
+
+
+if __name__ == "__main__":
+    main()

@@ -110,6 +110,12 @@ PAGE = """<!doctype html>
   .chip b { color: #e8eaed; }
   .chip.p1 { border-color: #5c1a1a; } .chip.p2 { border-color: #52400f; }
   #coverage .headline { color: #7a869a; font-size: .78rem; align-self: center; }
+  .chip { cursor: pointer; }
+  .chip.active { background: #2b6cb0; color: #fff; }
+  .chip.active b { color: #fff; }
+  #sort-toggle { background: #1a2027; color: #b7c0cc; border: 1px solid #333c47;
+                 border-radius: 6px; padding: .2rem .6rem; cursor: pointer;
+                 font-size: .74rem; margin-left: .4rem; }
   table { border-collapse: collapse; width: 100%; font-size: .82rem; }
   th, td { padding: .32rem .55rem; text-align: left; border-bottom: 1px solid #262d36; }
   th { color: #7a869a; position: sticky; top: 0; background: #101418; }
@@ -126,7 +132,9 @@ PAGE = """<!doctype html>
 </style>
 </head>
 <body>
-<h1>EV APM — fault operations <small>polling every 2s</small></h1>
+<h1>EV APM — fault operations <small>polling every 2s</small>
+  <button id="sort-toggle" title="toggle feed order">sort: tier</button>
+</h1>
 <div id="counters"></div>
 <div id="coverage"></div>
 
@@ -150,6 +158,15 @@ PAGE = """<!doctype html>
 
 <script>
 const TIER_ORDER = { P1: 0, P2: 1, P3: 2 };
+// dry-run must-fixes: feed order toggle + category filter (click a chip)
+let sortMode = 'tier';       // 'tier' | 'newest'
+let categoryFilter = null;   // category string or null = all
+
+document.getElementById('sort-toggle').addEventListener('click', () => {
+  sortMode = sortMode === 'tier' ? 'newest' : 'tier';
+  document.getElementById('sort-toggle').textContent = 'sort: ' + sortMode;
+  poll();
+});
 
 function el(tag, cls, text) {
   const node = document.createElement(tag);
@@ -172,12 +189,16 @@ async function poll() {
     const all = await alertsRes.json();
     const stats = await statsRes.json();
 
-    all.sort((x, y) => (TIER_ORDER[x.priority_tier] ?? 3) - (TIER_ORDER[y.priority_tier] ?? 3)
-                    || (y.fired_at || '').localeCompare(x.fired_at || ''));
+    if (sortMode === 'tier')
+      all.sort((x, y) => (TIER_ORDER[x.priority_tier] ?? 3) - (TIER_ORDER[y.priority_tier] ?? 3)
+                      || (y.fired_at || '').localeCompare(x.fired_at || ''));
+    else
+      all.sort((x, y) => (y.fired_at || '').localeCompare(x.fired_at || ''));
+    const visible = categoryFilter ? all.filter(a => category(a) === categoryFilter) : all;
 
     const rows = document.getElementById('rows');
     rows.replaceChildren();
-    for (const a of all) {
+    for (const a of visible) {
       const tr = el('tr');
       const badge = el('td'); badge.append(Object.assign(el('span', 'badge ' + (a.priority_tier || '')), { textContent: a.priority_tier || '—' }));
       tr.append(badge, el('td', null, a.fired_at),
@@ -204,10 +225,17 @@ async function poll() {
     }
     const coverage = document.getElementById('coverage');
     coverage.replaceChildren(el('span', 'headline',
-      `${rollup.size} of 19 OCPP categories seen in buffer:`));
+      `${rollup.size} of 19 OCPP categories seen in buffer` +
+      (categoryFilter ? ` — filtering: ${categoryFilter} (click again to clear)` : ' — click a chip to filter:')));
     for (const [key, entry] of [...rollup].sort((a, b) => b[1].count - a[1].count)) {
-      const chip = el('span', 'chip' + (entry.worst === 'P1' ? ' p1' : entry.worst === 'P2' ? ' p2' : ''));
+      const chip = el('span', 'chip'
+        + (entry.worst === 'P1' ? ' p1' : entry.worst === 'P2' ? ' p2' : '')
+        + (categoryFilter === key ? ' active' : ''));
       chip.append(el('b', null, key), document.createTextNode(` ×${entry.count}`));
+      chip.addEventListener('click', () => {
+        categoryFilter = categoryFilter === key ? null : key;
+        poll();
+      });
       coverage.append(chip);
     }
     const flagRate = stats.sessions_scored

@@ -269,6 +269,10 @@ def flag_connector_sessions(open_sessions: dict, connector_pk: int) -> None:
 
 def main() -> None:
     detectors: dict[int, list] = {}
+    # Parallel index of just the silence detectors: the per-event clock sweep
+    # visits every connector, so it must not walk full detector lists with
+    # isinstance checks (review efficiency finding).
+    silence_detectors: dict[int, TelemetrySilenceDetector] = {}
     open_sessions: dict[int, dict] = {}  # transaction_pk -> session state
     counts = {
         "events": 0, "routed": 0, "skipped": 0, "parse_errors": 0, "alerts": 0,
@@ -306,9 +310,12 @@ def main() -> None:
                     "started_at": event.start_timestamp,
                     "layer1_flagged": False,
                 }
-            for detector in detectors.setdefault(
-                event.connector_pk, make_detectors(event.connector_pk)
-            ):
+            if event.connector_pk not in detectors:
+                detectors[event.connector_pk] = make_detectors(event.connector_pk)
+                silence_detectors[event.connector_pk] = next(
+                    d for d in detectors[event.connector_pk]
+                    if isinstance(d, TelemetrySilenceDetector))
+            for detector in detectors[event.connector_pk]:
                 if isinstance(detector, CategoryPointDetector):
                     alert = detector.consume(event, canonical)
                 else:
@@ -327,15 +334,11 @@ def main() -> None:
         # the stream — Heartbeats included — advances the shared event clock
         # and sweeps all connectors' silence detectors.
         if clock is not None:
-            for connector_detectors in detectors.values():
-                for detector in connector_detectors:
-                    if isinstance(detector, TelemetrySilenceDetector):
-                        alert = detector.on_tick(clock)
-                        if alert is not None:
-                            emit(alert, counts)
-                            flag_connector_sessions(
-                                open_sessions, alert.connector_pk
-                            )
+            for detector in silence_detectors.values():
+                alert = detector.on_tick(clock)
+                if alert is not None:
+                    emit(alert, counts)
+                    flag_connector_sessions(open_sessions, alert.connector_pk)
 
     report_stats(counts)  # final counters after the stream drains
     if counts["sessions_scored"]:

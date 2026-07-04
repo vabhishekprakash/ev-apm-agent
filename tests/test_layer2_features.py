@@ -95,6 +95,22 @@ def test_asymmetry_none_for_single_outlet_session():
     }
 
 
+def test_rows_with_missing_or_bad_timestamps_are_skipped_not_fatal():
+    """Review finding: a sample without a timestamp (or with garbage) must be
+    skipped per the parsing contract, not crash the series sort."""
+    session = [
+        temp(0, "Outlet1", 40.0),
+        {"measurand": "Temperature", "location": "Outlet1", "value": 99.0},  # no ts
+        {"measurand": "Temperature", "location": "Outlet1", "value": 98.0,
+         "timestamp": "not-a-date"},
+        {"measurand": "Temperature", "location": "Outlet2", "value": 31.0,
+         "timestamp": T0.isoformat()},  # ISO string per module contract
+    ]
+    peaks = _peak_temp_features(session)
+    assert peaks["peak_temp_c1"] == 40.0  # bad rows skipped, not counted
+    assert peaks["peak_temp_c2"] == 31.0  # ISO string coerced
+
+
 def test_string_values_and_location_aliases_are_normalized():
     session = [
         {"measurand": "Temperature", "location": "outlet 1", "value": "44.5",
