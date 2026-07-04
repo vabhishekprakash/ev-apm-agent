@@ -1,0 +1,23 @@
+connector_pk,status,error_code,vendor_error_code,timestamp
+4784325,Preparing,NoError,,2026-05-15 09:49:55
+4784325,Charging,NoError,,2026-05-15 09:50:05
+4784325,Charging,system-err1051,,2026-05-15 10:00:00
+4784325,Finishing,system-err1051,,2026-05-15 10:00:04
+4784325,Available,NoError,,2026-05-15 10:00:18
+5802030,Preparing,system-err1024,,2026-05-15 10:01:00
+5802030,Preparing,NoError,,2026-05-15 10:01:50
+5802030,Charging,NoError,,2026-05-15 10:02:05
+5802030,Available,NoError,,2026-05-15 10:10:10
+1744735,Available,NoError,,2026-05-16 08:59:00
+1744735,Faulted,WeakSignal,SignalWeak:11/JIO 4G Jio/FDD LTE/0,2026-05-16 09:00:00
+1744735,Faulted,WeakSignal,SignalWeak:9/JIO 4G Jio/FDD LTE/0,2026-05-16 09:00:45
+1744735,Faulted,WeakSignal,SignalWeak:8/JIO 4G Jio/FDD LTE/0,2026-05-16 09:01:30
+1744735,Faulted,WeakSignal,SignalWeak:11/JIO 4G Jio/FDD LTE/0,2026-05-16 09:02:15
+1744735,Faulted,WeakSignal,SignalWeak:7/JIO 4G Jio/FDD LTE/0,2026-05-16 09:03:00
+1744735,Faulted,WeakSignal,SignalWeak:6/JIO 4G Jio/FDD LTE/0,2026-05-16 09:03:45
+1679593,Faulted,GroundFailure,0x3A21,2026-05-16 09:05:00
+1679593,Available,NoError,,2026-05-16 09:06:00
+2009529,Faulted,UnderVoltage,R:63.9V,2026-05-16 10:00:00
+2009529,Available,NoError,,2026-05-16 10:01:00
+2009529,Faulted,OverVoltage,R:263.1V,2026-05-16 15:00:00
+2009529,Available,NoError,,2026-05-16 15:01:00

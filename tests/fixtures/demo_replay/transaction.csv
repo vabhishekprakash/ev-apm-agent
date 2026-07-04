@@ -1,0 +1,3 @@
+transaction_pk,connector_pk,start_timestamp,stop_timestamp,stop_reason
+910001,4784325,"2026-05-15 09:50:00","2026-05-15 10:00:05",Other
+910002,5802030,"2026-05-15 10:02:00","2026-05-15 10:10:00",Remote

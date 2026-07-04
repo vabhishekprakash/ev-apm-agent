@@ -1,8 +1,14 @@
-# Demo script v1 — 3–4 min narrated walkthrough (Week 2 Day 3)
+# Demo script v2 — 3–4 min narrated walkthrough (revised after dry-run #1)
 
-Setup before recording: `docker compose down -v && MSYS_NO_PATHCONV=1
-REPLAY_SPEED_MULTIPLIER=60 docker compose up` — browser on
-`localhost:8000`, drift panel pre-selected on connector 2009529.
+Setup before recording (two-source runbook, see docs/demo_dryrun_w2.md):
+1. `docker compose down -v && MSYS_NO_PATHCONV=1 DATA_DIR=/app/data/raw
+   REPLAY_SPEED_MULTIPLIER=60 docker compose up` — real replay populates
+   drift panel + real UnderVoltage/silence alerts.
+2. Second terminal, fault-story injection onto the same dashboard:
+   `DATA_DIR=tests/fixtures/demo_replay REPLAY_SPEED_MULTIPLIER=1
+   python replay/main.py | (cd detector && ALERT_SINK=http
+   ALERT_URL=http://localhost:8000/alerts python main.py)`
+3. Browser on `localhost:8000`, drift panel pre-selected on connector 2009529.
 
 Every narration line has an on-screen anchor (Task 2 reconciliation table
 at the bottom). Numbers match `docs/deck_outline.md` exactly.
@@ -40,10 +46,12 @@ at the bottom). Numbers match `docs/deck_outline.md` exactly.
 
 **2:20–3:00 — proof + deployment** *(summary header in view)*
 > "Thirty-nine stations, eighty connectors, twelve vendor brands, nineteen
-> firmware versions. Our false-positive rate on a chronological held-out
-> split is 3.6 percent — measured, not vibes. It deploys as a sidecar
-> container next to any OCPP-compliant CMS: docker compose up, point it at
-> the event stream, alerts go wherever your ops live."
+> firmware versions. The UnderVoltage alerts you're seeing are real fleet
+> data — eighteen events in this ninety-day window, all eighteen caught.
+> Our false-positive rate on a chronological held-out split is 3.6 percent
+> — measured, not vibes. It deploys as a sidecar container next to any
+> OCPP-compliant CMS: docker compose up, point it at the event stream,
+> alerts go wherever your ops live."
 
 **3:00–3:30 — close**
 > "Charging infrastructure is being built faster than anyone is learning to

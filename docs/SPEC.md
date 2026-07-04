@@ -228,3 +228,37 @@ Copy this to a GitHub Issue titled `Week 1 exit criteria` and check off:
 - Deck outline v1
 - Demo script v1
 - Data-owner enrichment ask for the NaN-vendor row and connector-0 anomaly
+---
+
+# Week 2 findings addendum (2026-07-04, at v0.2.0-week2)
+
+- **Taxonomy discovery, partially absorbed:** the Errornotify error-taxonomy
+  numbers (19 OCPP categories / 2.77M occurrences / ~17.5k vendor codes)
+  reshaped the story, but the CSV itself has NOT been delivered — the
+  normalizer's lookup tables and coverage measurement
+  (scripts/normalizer_coverage.py) await it. Provenance notes ride every
+  taxonomy claim until then.
+- **Layer 1 detects 6 categories:** err1051 (state machine + recovery
+  classification), err1024 (point event), telemetry-silence, WeakSignal
+  (burst escalation), GroundFailure (safety P1), Under/OverVoltage (24h
+  repeat escalation). UnderVoltage verified on 18 real events (audit flag
+  18); the rest fixture-verified pending the fault-event export
+  (data/sql/fault_events.sql, request sent W2D1).
+- **Vendor code normalization** shipped as shape-rule engine with
+  taxonomy-fed lookup tables (detector/vendor_code_normalizer.py); unmapped
+  codes fall through to the already-labeled error_code field by design.
+- **Alert prioritization live:** P1/P2/P3 with deciding signals; 13s
+  self-recovery downgrade, drift-streak and repeat-offender escalations
+  (detector/prioritizer.py).
+- **FPR (headline metric): 3.62%** chronological per-connector holdout at
+  the deployed threshold −0.1187 (notebook 04, n=2,015); expanded-normal
+  retrain shipped for 2009529/2009530 after passing the FPR gate
+  (notebook 05).
+- **Lead-time verdict: negative** (lift 0.57× — docs/layer2_leadtime.md).
+  The pitch line is "orthogonal degradation tracking". Re-evaluate only if
+  the measurand re-export enables richer features.
+- **Identity correction:** PRABHAEV004N = hash 0c70c6b0…, CN.TH, connectors
+  2009529/2009530 (+ plug-0 2013696). Week 1 materials mislabeled d4416bd8….
+- **Deck outline v1** (honesty-audited) and **demo script v2** (two-source
+  runbook, dry-run #1 proven) committed; UI must-fix list in
+  docs/demo_dryrun_w2.md; Week 3 plan in docs/week3_plan.md.

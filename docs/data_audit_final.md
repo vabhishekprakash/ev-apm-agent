@@ -161,3 +161,12 @@ path) — encoded as a Layer 1 sub-detector.
     is framed as orthogonal degradation tracking. Expanded-normal retrain
     for 2009529/2009530 shipped after passing the FPR gate
     (1.74%→1.16% / 2.84%→2.84%).
+18. **Correction (2026-07-04, found in the W2D6 dry-run):** the capped
+    status export is NOT fault-free — it carries 344 non-NoError rows:
+    UnderVoltage 18, PowerMeterFailure 22, EVCommunicationError 12,
+    OtherError 102, plus vendor strings ("Available after Finishing
+    Status" 106, "Transaction Stopped" 84). Earlier "zero fault rows"
+    statements were true only of the err1051/err1024 sequences.
+    Consequence: **UnderVoltage detection is verified on real events**
+    (18/18 alerts on replay); the deck may claim one real-verified
+    category beyond telemetry-silence today.
