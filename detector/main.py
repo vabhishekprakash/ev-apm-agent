@@ -188,6 +188,14 @@ def score_session_close(event: StopTransaction, session: dict, counts: dict) -> 
         sink_alert(payload)
 
 
+def flag_connector_sessions(open_sessions: dict, connector_pk: int) -> None:
+    """A Layer 1 fault on a connector marks its open sessions; Layer 2 only
+    scores fault-free sessions (SPEC Day 6 Task 3)."""
+    for session in open_sessions.values():
+        if session["connector_pk"] == connector_pk:
+            session["layer1_flagged"] = True
+
+
 def main() -> None:
     detectors: dict[int, list] = {}
     open_sessions: dict[int, dict] = {}  # transaction_pk -> session state
@@ -226,11 +234,7 @@ def main() -> None:
                 alert = detector.consume(event)
                 if alert is not None:
                     emit(alert, counts)
-                    # A Layer 1 fault on this connector marks its open
-                    # sessions; Layer 2 only scores fault-free sessions.
-                    for session in open_sessions.values():
-                        if session["connector_pk"] == event.connector_pk:
-                            session["layer1_flagged"] = True
+                    flag_connector_sessions(open_sessions, event.connector_pk)
             if isinstance(event, StopTransaction):
                 session = open_sessions.pop(event.transaction_pk, None)
                 if session is not None:
@@ -248,6 +252,9 @@ def main() -> None:
                         alert = detector.on_tick(clock)
                         if alert is not None:
                             emit(alert, counts)
+                            flag_connector_sessions(
+                                open_sessions, alert.connector_pk
+                            )
 
     if counts["sessions_scored"]:
         rate = counts["layer2_flagged"] / counts["sessions_scored"]
