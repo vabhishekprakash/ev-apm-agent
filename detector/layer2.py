@@ -352,7 +352,10 @@ class Layer2Anomaly:
             return entry["file"]
         family = self.index.get("connectors", {}).get(connector_pk, {}).get(
             "vendor_family", "unknown")
-        pooled = self.index.get("pooled_models", {}).get(family)
+        pooled_models = self.index.get("pooled_models", {})
+        # Families without their own cohort (thin or unseen) route to the
+        # global pooled model when the artifact set provides one.
+        pooled = pooled_models.get(family) or pooled_models.get("_global")
         return pooled["file"] if pooled else None
 
     def score(self, session_features: dict, hashed_charge_box_id: str,
