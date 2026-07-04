@@ -104,6 +104,12 @@ PAGE = """<!doctype html>
   .counter b { display: block; font-size: 1.3rem; }
   .counter span { color: #7a869a; font-size: .72rem; text-transform: uppercase; letter-spacing: .04em; }
   .counter.p1 b { color: #ff6b6b; } .counter.p2 b { color: #fdcb6e; }
+  #coverage { display: flex; gap: .45rem; flex-wrap: wrap; margin: 0 0 1rem; }
+  .chip { background: #1a2027; border: 1px solid #2a323d; border-radius: 12px;
+          padding: .15rem .6rem; font-size: .74rem; color: #b7c0cc; }
+  .chip b { color: #e8eaed; }
+  .chip.p1 { border-color: #5c1a1a; } .chip.p2 { border-color: #52400f; }
+  #coverage .headline { color: #7a869a; font-size: .78rem; align-self: center; }
   table { border-collapse: collapse; width: 100%; font-size: .82rem; }
   th, td { padding: .32rem .55rem; text-align: left; border-bottom: 1px solid #262d36; }
   th { color: #7a869a; position: sticky; top: 0; background: #101418; }
@@ -122,6 +128,7 @@ PAGE = """<!doctype html>
 <body>
 <h1>EV APM — fault operations <small>polling every 2s</small></h1>
 <div id="counters"></div>
+<div id="coverage"></div>
 
 <table>
   <thead><tr>
@@ -184,6 +191,25 @@ async function poll() {
     const p1 = all.filter(a => a.priority_tier === 'P1').length;
     const p2 = all.filter(a => a.priority_tier === 'P2').length;
     const categories = new Set(all.map(category));
+
+    // category-coverage panel: one chip per category with count + worst tier
+    const rollup = new Map();
+    for (const a of all) {
+      const key = category(a);
+      const entry = rollup.get(key) || { count: 0, worst: 'P3' };
+      entry.count++;
+      if (a.priority_tier === 'P1' || (a.priority_tier === 'P2' && entry.worst === 'P3'))
+        entry.worst = a.priority_tier;
+      rollup.set(key, entry);
+    }
+    const coverage = document.getElementById('coverage');
+    coverage.replaceChildren(el('span', 'headline',
+      `${rollup.size} of 19 OCPP categories seen in buffer:`));
+    for (const [key, entry] of [...rollup].sort((a, b) => b[1].count - a[1].count)) {
+      const chip = el('span', 'chip' + (entry.worst === 'P1' ? ' p1' : entry.worst === 'P2' ? ' p2' : ''));
+      chip.append(el('b', null, key), document.createTextNode(` ×${entry.count}`));
+      coverage.append(chip);
+    }
     const flagRate = stats.sessions_scored
       ? (100 * stats.layer2_flagged / stats.sessions_scored).toFixed(1) + '%' : '—';
     const counters = document.getElementById('counters');

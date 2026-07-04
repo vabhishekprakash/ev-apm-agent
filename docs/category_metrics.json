@@ -1,0 +1,136 @@
+[
+  {
+    "stream": "day5 fixture (err1051/err1024/silence)",
+    "provenance": "synthetic fixture",
+    "total_alerts": 4,
+    "categories": [
+      {
+        "category": "err1024",
+        "events_observed": 1,
+        "alerts": 1,
+        "detection_rate": 1.0,
+        "priority_distribution": {
+          "P2": 1
+        },
+        "time_to_alert_s": 0,
+        "note": "fires on the event itself"
+      },
+      {
+        "category": "err1051",
+        "events_observed": 2,
+        "alerts": 2,
+        "detection_rate": null,
+        "priority_distribution": {
+          "P2": 1,
+          "P3": 1
+        },
+        "time_to_alert_s": null,
+        "note": "stateful: candidate at StopTransaction + final at recovery"
+      },
+      {
+        "category": "telemetry-silence",
+        "events_observed": null,
+        "alerts": 1,
+        "detection_rate": null,
+        "priority_distribution": {
+          "P1": 1
+        },
+        "time_to_alert_s": null,
+        "note": "absence-of-telemetry signal; fires at threshold by design"
+      }
+    ]
+  },
+  {
+    "stream": "day4 fixture (WeakSignal/Ground/Voltage)",
+    "provenance": "synthetic fixture",
+    "total_alerts": 9,
+    "categories": [
+      {
+        "category": "GroundFailure",
+        "events_observed": 1,
+        "alerts": 1,
+        "detection_rate": 1.0,
+        "priority_distribution": {
+          "P1": 1
+        },
+        "time_to_alert_s": 0,
+        "note": "fires on the event itself"
+      },
+      {
+        "category": "OverVoltage",
+        "events_observed": 1,
+        "alerts": 1,
+        "detection_rate": 1.0,
+        "priority_distribution": {
+          "P1": 1
+        },
+        "time_to_alert_s": 0,
+        "note": "fires on the event itself"
+      },
+      {
+        "category": "UnderVoltage",
+        "events_observed": 1,
+        "alerts": 1,
+        "detection_rate": 1.0,
+        "priority_distribution": {
+          "P2": 1
+        },
+        "time_to_alert_s": 0,
+        "note": "fires on the event itself"
+      },
+      {
+        "category": "WeakSignal",
+        "events_observed": 6,
+        "alerts": 6,
+        "detection_rate": 1.0,
+        "priority_distribution": {
+          "P3": 5,
+          "P2": 1
+        },
+        "time_to_alert_s": 0,
+        "note": "fires on the event itself"
+      }
+    ]
+  },
+  {
+    "stream": "capped 90-day export",
+    "provenance": "real export (fault rows absent \u2014 cap)",
+    "total_alerts": 281,
+    "categories": [
+      {
+        "category": "UnderVoltage",
+        "events_observed": 18,
+        "alerts": 18,
+        "detection_rate": 1.0,
+        "priority_distribution": {
+          "P1": 18
+        },
+        "time_to_alert_s": 0,
+        "note": "fires on the event itself"
+      },
+      {
+        "category": "layer2_drift",
+        "events_observed": null,
+        "alerts": 34,
+        "detection_rate": null,
+        "priority_distribution": {
+          "P3": 8,
+          "P2": 26
+        },
+        "time_to_alert_s": null,
+        "note": "session-close scoring"
+      },
+      {
+        "category": "telemetry-silence",
+        "events_observed": null,
+        "alerts": 229,
+        "detection_rate": null,
+        "priority_distribution": {
+          "P1": 229
+        },
+        "time_to_alert_s": null,
+        "note": "absence-of-telemetry signal; fires at threshold by design"
+      }
+    ]
+  }
+]

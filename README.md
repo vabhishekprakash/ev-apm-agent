@@ -35,3 +35,51 @@ We'll prove it on real data from 39 stations across 5+ vendors, deployed as a dr
 | `notebooks/` | Exploration, EDA, and prototyping |
 | `docs/` | Architecture, methodology, and runbooks |
 | `tests/` | Unit and integration tests |
+
+## Architecture
+
+![Architecture v1](docs/architecture_v1.png)
+
+Two-layer detection: **Layer 1** — deterministic fault-sequence state
+machines (err1051), point-event category detectors (err1024, WeakSignal,
+GroundFailure, Under/OverVoltage) and a telemetry-silence detector, fed
+through a vendor-code normalizer; **Layer 2** — per-connector Isolation
+Forests (pooled fallback for sparse connectors) scoring every closed
+session. An alert prioritizer tiers everything (P1/P2/P3) with the deciding
+signal attached before it reaches the dashboard.
+
+## Quickstart
+
+```bash
+docker compose up            # replay -> detector -> ui on localhost:8000
+```
+
+Demo replay of the synthetic fault fixtures at 60x:
+
+```bash
+docker compose down -v
+MSYS_NO_PATHCONV=1 DATA_DIR=/app/tests/fixtures/day5_replay \
+  REPLAY_SPEED_MULTIPLIER=60 docker compose up
+# browser -> http://localhost:8000  (P1/P2/P3 feed + drift panel)
+```
+
+Local pipeline without Docker:
+
+```bash
+REPLAY_SPEED_MULTIPLIER=0 python replay/main.py | python detector/main.py
+python -m pytest tests/    # 57 tests
+```
+
+Headline metric: **3.62% false-positive rate** on a chronological held-out
+split (notebook 04); alert thresholds documented in `.env.example`.
+
+## Attribution
+
+Built for the **ET AI Hackathon 2026** by V. Abhishek Prakash (Layer 1 +
+integration) and Akhil Prasad (Layer 2 + data audit).
+
+Data provenance: anonymized OCPP telemetry exports from a production
+charging-management system (charge-box ids SHA-256-hashed, geo coordinates
+rounded, customer/RFID/IP fields dropped at export). Raw exports are never
+committed — see `.gitignore` and `docs/data_audit_v0.md` for the audit trail.
+MIT licensed.
