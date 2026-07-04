@@ -41,8 +41,12 @@ services:
       - ./models:/app/models:ro
       - event-bus:/bus
     depends_on:
-      - ui
-      - replay
+      # Gate on UI readiness, not just container start: at high replay speeds
+      # the detector can emit alerts before uvicorn binds the port.
+      ui:
+        condition: service_healthy
+      replay:
+        condition: service_started
     networks:
       - evapm-net
 
@@ -53,6 +57,12 @@ services:
     container_name: evapm-ui
     ports:
       - "8000:8000"
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health', timeout=3)"]
+      interval: 3s
+      timeout: 5s
+      retries: 10
+      start_period: 2s
     networks:
       - evapm-net
 
