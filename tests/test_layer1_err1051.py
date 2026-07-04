@@ -95,6 +95,53 @@ def test_stuck_state_times_out_and_machine_restarts():
     assert det.first_seen_at == T0 + timedelta(seconds=120)
 
 
+def test_slow_recovery_past_dwell_limit_still_emits_final_alert():
+    """Recovery >60s: the Available event completes the sequence with the
+    true recovery time instead of being swallowed by the stuck reset."""
+    det = Err1051Detector(CONN)
+    alerts = run_sequence(det, [
+        status(0, "Charging", ERR_1051),
+        meter(2, 0),
+        status(4, "Finishing", ERR_1051),
+        stop(5, "Other"),
+        status(75, "Available", "NoError"),  # 70s after stop, past 60s dwell
+    ])
+    final = alerts[-1]
+    assert final.stage == "final"
+    assert final.recovered_after_seconds == 70.0
+    assert final.classification == "technician-dispatch"
+    assert det.state is Err1051State.IDLE
+
+
+def test_unrecovered_stop_txn_times_out_with_dispatch_alert():
+    """No recovery within the dwell limit: reset must emit a final
+    technician-dispatch alert (recovery unobserved), not drop the sequence."""
+    det = Err1051Detector(CONN)
+    run_sequence(det, [
+        status(0, "Charging", ERR_1051),
+        meter(2, 0),
+        status(4, "Finishing", ERR_1051),
+        stop(5, "Other"),
+    ])
+    assert det.state is Err1051State.STOP_TXN
+    # 90s later the connector is still not Available — any event trips the
+    # timeout and surfaces the unrecovered fault.
+    alert = det.consume(meter(95, 4200))
+    assert alert is not None
+    assert alert.stage == "final"
+    assert alert.recovered_after_seconds is None
+    assert alert.classification == "technician-dispatch"
+    assert det.state is Err1051State.IDLE
+
+
+def test_non_stop_txn_stuck_reset_still_emits_no_alert():
+    det = Err1051Detector(CONN)
+    det.consume(status(0, "Charging", ERR_1051))
+    alert = det.consume(meter(120, 4200))  # stuck in ERR_FIRST_SEEN, no fault proven
+    assert alert is None
+    assert det.state is Err1051State.IDLE
+
+
 def test_normal_traffic_stays_idle():
     det = Err1051Detector(CONN)
     alerts = run_sequence(det, [

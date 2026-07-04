@@ -123,21 +123,55 @@ class Err1051Detector:
         self.stopped_at: datetime | None = None
 
     def consume(self, event: Event) -> FaultAlert | None:
+        stuck_alert = None
         if self.state is not Err1051State.IDLE and self._stuck(event):
-            print(
-                f"warning: err1051 machine for connector {self.connector_pk} "
-                f"stuck in {self.state.name} >{STUCK_STATE_TIMEOUT_SECONDS:.0f}s, resetting",
-                file=sys.stderr,
-            )
-            self.reset()
+            if self._completes_recovery(event):
+                # Recovery observed, merely slower than the dwell limit — fall
+                # through so _on_status computes the true recovery_seconds
+                # (>15s, so it classifies technician-dispatch on its own).
+                pass
+            else:
+                if self.state is Err1051State.STOP_TXN:
+                    # The fault outlived the dwell limit with no recovery in
+                    # sight: this is the most dispatch-worthy case, so emit
+                    # the final alert (recovery unobserved) instead of
+                    # silently dropping the sequence.
+                    stuck_alert = FaultAlert(
+                        detector=self.DETECTOR_NAME,
+                        connector_pk=self.connector_pk,
+                        fired_at=_event_ts(event),
+                        stage="final",
+                        fault_code="err1051",
+                        mechanism="internal socket init failure",
+                        classification_override="technician-dispatch",
+                    )
+                print(
+                    f"warning: err1051 machine for connector {self.connector_pk} "
+                    f"stuck in {self.state.name} >{STUCK_STATE_TIMEOUT_SECONDS:.0f}s, resetting",
+                    file=sys.stderr,
+                )
+                self.reset()
 
+        alert = None
         if isinstance(event, StatusNotification):
-            return self._on_status(event)
-        if isinstance(event, MeterValues):
-            return self._on_meter_values(event)
-        if isinstance(event, StopTransaction):
-            return self._on_stop_transaction(event)
-        return None  # StartTransaction plays no role in this sequence
+            alert = self._on_status(event)
+        elif isinstance(event, MeterValues):
+            alert = self._on_meter_values(event)
+        elif isinstance(event, StopTransaction):
+            alert = self._on_stop_transaction(event)
+        # StartTransaction plays no role in this sequence.
+
+        # Dispatch from IDLE never produces an alert, so the two can't clash.
+        return alert if alert is not None else stuck_alert
+
+    def _completes_recovery(self, event: Event) -> bool:
+        """True when the incoming event is the Available status the STOP_TXN
+        state is waiting for — a slow recovery, not a wedged machine."""
+        return (
+            self.state is Err1051State.STOP_TXN
+            and isinstance(event, StatusNotification)
+            and event.status.value == "Available"
+        )
 
     def reset(self) -> None:
         """Return to IDLE (sequence broken, stalled, or completed)."""
