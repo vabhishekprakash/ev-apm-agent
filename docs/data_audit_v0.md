@@ -96,3 +96,46 @@ path) — encoded as a Layer 1 sub-detector.
    counts 12 vendor strings including a literal `NULL` pair — the NaN
    chargepoint from flag 1. `chargepoint.csv` likewise has 20 fw_version
    values including the null.
+
+### New-delivery flags (added 2026-07-04: master_training_set.csv + recovered_PRABHAEV004N_sessions.csv)
+
+9. **PRABHAEV004N identity correction.** `sha256("PRABHAEV004N")` =
+   `0c70c6b0…` — vendor **CN.TH**, connector_pks **2009529 (plug 1), 2009530
+   (plug 2), 2013696 (plug 0 — the connectorId=0 anomaly, 799 status rows /
+   145 fault episodes of its own)**. Earlier Week-1 docs, fixtures, and PR
+   text mislabeled station `d4416bd8…` (vendor PRABHAEV1, pks 4784325/5802030)
+   as PRABHAEV004N. Reference files were always internally consistent; only
+   our labels were wrong. Fixture data is synthetic and unaffected; per-connector
+   IsoForest models for the real PRABHAEV004N (`isoforest_0c70c6b0…_1/_2.pkl`)
+   exist and were trained on its 861/880 delivered sessions.
+10. **Fault-evidence windows (master_training_set.csv, 852 rows, 46 fault
+    events, June 2026).** Six measurands per event (V/A/kW/Wh/Hz/°C). During
+    faults **voltage never drops (179.9–241.6 V)**; only Current.Import and
+    Power.Active.Import collapse to 0. The SPEC Day-4 meter-zero guard
+    (`voltage AND current AND power == 0`) would **never fire** on this
+    evidence — when the measurand-bearing re-export lands, the guard should be
+    `current == 0 AND power == 0` (voltage nominal). Current stand-in
+    (`meter_reading_wh == 0`) unchanged until then. `fault_ref` joins nothing
+    in our exports (0/46 against transaction_pk) — semantics unknown, ask the
+    data owner.
+11. **Temperature field is dead in the fault evidence: all 142 Temperature
+    rows are 0.0 °C.** Layer-2 temperature features (peak temps, outlet
+    asymmetry) remain unvalidatable on real data, and would train as all-zero
+    garbage if fed this export. Logged as a red-flag Issue per the Day-5
+    joint checklist.
+12. **Recovered PRABHAEV004N status history (41,183 rows, 2025-10-03 →
+    2026-07-04)** substantially fills flag 7's missing block: ~4,715 charging
+    episodes ≈ the audited ~4,439 sessions (longer window). Fault reality on
+    this station: **2,041 Faulted episodes** (946 + 950 + 145 per connector),
+    recovery **median 33 s, p25 4 s, p75 ~245 s — only ~42% ≤ 15 s**. The
+    "13-second transient" narrative describes the fast quartile, not the
+    majority; alert-prioritization (Week 2 Day 1) should assume most faults
+    are dispatch-relevant. No error codes in this file — err1051 vs err1024
+    split still requires the data-owner reply (escalation still open).
+13. **Silence-alert triage (capped export):** of 859 sessions with >90 s
+    quiet tails, 858 have no meter rows at all in the capped export and 1
+    ends at the meter-table cutoff (2026-05-02 09:18) — **0 real mid-session
+    silences; the 229 telemetry_silence alerts on capped-export replay are
+    100% export-truncation artifacts.** The detector logic is validated by
+    unit tests and fixtures; artifact alerts will disappear with the
+    date-bounded re-export (flag 5).

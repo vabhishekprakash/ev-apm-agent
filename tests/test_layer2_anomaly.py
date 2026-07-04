@@ -72,6 +72,19 @@ def test_none_for_unknown_station_or_unpooled_family(models_dir):
         {"duration_sec": 100.0, "start_hour": 1.0}, 999) is None
 
 
+def test_unpooled_family_routes_to_global_pool_when_present(models_dir):
+    import pickle as _pickle
+    with (models_dir / "isoforest_index.pkl").open("rb") as f:
+        index = _pickle.load(f)
+    index["pooled_models"]["_global"] = {"file": "isoforest_pooled_tucker.pkl"}
+    with (models_dir / "isoforest_index.pkl").open("wb") as f:
+        _pickle.dump(index, f)
+    layer2 = Layer2Anomaly(models_dir, threshold=-0.1)
+    # connector 999's family has no cohort model; _global now serves it
+    assert layer2.score_by_connector_pk(
+        {"duration_sec": 2000.0, "start_hour": 11.0}, 999) is not None
+
+
 def test_none_for_missing_feature(models_dir):
     layer2 = Layer2Anomaly(models_dir, threshold=-0.1)
     assert layer2.score({"duration_sec": 100.0}, STATION, 1) is None
