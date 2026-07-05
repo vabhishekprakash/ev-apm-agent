@@ -24,6 +24,10 @@ CONSECUTIVE_DRIFT_THRESHOLD = 3
 VOLTAGE_REPEAT_WINDOW = timedelta(hours=24)
 BURST_WINDOW = timedelta(minutes=5)
 BURST_THRESHOLD = 5  # >5 events in BURST_WINDOW escalates WeakSignal
+# 88% of PRABHAEV004N fault episodes hit both plugs within 5s (audit flag
+# 19) — near-simultaneous faults on different connectors of one station are
+# a supply/controller-side outage, the most dispatch-relevant pattern.
+STATION_WIDE_WINDOW = timedelta(seconds=60)
 
 
 def _recovery(alert: dict) -> float | None:
@@ -121,6 +125,8 @@ class AlertPrioritizer:
         self._drift_streak: dict[int, int] = {}
         # connector_pk -> recent event-times per burst-tracked category
         self._bursts: dict[tuple[int, str], list[datetime]] = {}
+        # station hash -> (connector_pk, fired_at) of its last fault alert
+        self._station_last_fault: dict[str, tuple[int, datetime]] = {}
 
     def prioritize(self, alert: dict) -> dict:
         """Return the alert with priority_tier / priority_score /
@@ -130,6 +136,20 @@ class AlertPrioritizer:
 
         tier, signal = self._base_tier(alert)
         tier, signal = self._escalations(alert, connector, fired_at, tier, signal)
+
+        # Station-wide fault: a second connector of the same station alerting
+        # within the window means the charger itself (supply/controller) is
+        # down — the dominant real-world pattern (88% of observed episodes).
+        station = alert.get("hashed_charge_box_id")
+        if (station and fired_at is not None
+                and alert.get("detector_source") != "layer2_drift"):
+            last = self._station_last_fault.get(station)
+            if (last is not None and last[0] != connector
+                    and timedelta(0) <= fired_at - last[1] <= STATION_WIDE_WINDOW
+                    and tier != "P1"):
+                tier = "P1"
+                signal += "; station-wide fault pattern (multiple connectors)"
+            self._station_last_fault[station] = (connector, fired_at)
 
         # Repeat offender: any alert on a connector with a P1 in the last 24h
         # moves up one tier.

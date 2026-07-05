@@ -48,3 +48,12 @@ implementation was verified meanwhile.
 3. Run `py scripts/normalizer_coverage.py` for the measured coverage number
    (Task 2) — target ≥90% routed by rules; the long tail falls through to
    the labeled `error_code` field by design.
+
+## err1024 update (2026-07-05) — blocker closed
+
+The crash signature (`data/raw/err1024_crash_signature.csv`, 3 real events)
+confirms the point-event design as final: supply nominal (227.4–227.9 V,
+~49.9 Hz), current/power ≈ 0, energy flat — no retry or recovery sequence to
+model. Detector docstring updated; burst/repeat escalation stays in the
+prioritizer, which also gains the **station-wide P1 escalation** (88% of real
+fault episodes are simultaneous both-plug events — audit flag 19).

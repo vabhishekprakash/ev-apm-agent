@@ -12,7 +12,7 @@ the full fault-event export lands. Rows are provenance-labeled.
 
 | category | events | alerts | detection | tiers | latency | note |
 |---|---|---|---|---|---|---|
-| err1024 | 1 | 1 | 100% | P2:1 | 0s | fires on the event itself |
+| err1024 | 1 | 1 | 100% | P1:1 | 0s | fires on the event itself |
 | err1051 | 2 | 2 | — | P2:1, P3:1 | — | stateful: candidate at StopTransaction + final at recovery |
 | telemetry-silence | — | 1 | — | P1:1 | — | absence-of-telemetry signal; fires at threshold by design |
 
