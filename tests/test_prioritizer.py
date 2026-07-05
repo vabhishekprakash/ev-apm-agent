@@ -102,6 +102,28 @@ def test_day4_category_rules_ground_voltage_weaksignal():
     assert "burst" in burst["deciding_signal"]
 
 
+def test_station_wide_fault_escalates_second_connector_to_p1():
+    """88% of real fault episodes hit both plugs within 5s (flag 19): a
+    second connector of the same station alerting inside the window is a
+    supply-side outage -> P1."""
+    p = AlertPrioritizer()
+    station = "0c70c6b0" + "0" * 56
+    first = p.prioritize(alert("err1024", 0, connector=CONN,
+                               hashed_charge_box_id=station))
+    assert first["priority_tier"] == "P2"
+    second = p.prioritize(alert("err1024", 4, connector=CONN + 1,
+                                hashed_charge_box_id=station))
+    assert second["priority_tier"] == "P1"
+    assert "station-wide" in second["deciding_signal"]
+    # same connector again: not station-wide; drift never triggers it
+    third = p.prioritize(alert("err1024", 8, connector=CONN + 1,
+                               hashed_charge_box_id=station))
+    assert "station-wide" not in third["deciding_signal"]
+    drift = p.prioritize(alert("layer2_drift", 12, connector=CONN + 2,
+                               hashed_charge_box_id=station))
+    assert "station-wide" not in drift["deciding_signal"]
+
+
 def test_unknown_alert_type_gets_p2_fallback():
     p = AlertPrioritizer()
     out = p.prioritize(alert("some_future_detector"))

@@ -256,13 +256,16 @@ def _event_ts(event: Event) -> datetime:
 class Err1024Detector:
     """Point-event handler for err1024 — no state machine, fires on sight.
 
-    SLAC handshake failure happens pre-charge, so there may be no transaction
-    open. Sequencing questions (StartTransaction ordering, retry bursts,
-    recovery signal) are still under investigation — SPEC §7 item 1.
-
-    TODO(data-owner): once the err1024 escalation reply lands, extend with the
-    confirmed retry sequence / recovery-time signal (SPEC Day 5 Task 1).
-    Until then every sighting fires, including retry bursts.
+    CONFIRMED FINAL (2026-07-05): the data-owner reply arrived as an
+    aggregate crash signature (data/raw/err1024_crash_signature.csv, 3 real
+    events): supply stays nominal (227.4–227.9 V, ~49.9 Hz) while current
+    and power sit at ~0 and the energy register never moves — "energized but
+    never charging", consistent with the pre-charge SLAC handshake failure.
+    No retry-sequence or recovery-time signal exists in the data, so the
+    point-event design is final; every sighting fires, and burst/repeat
+    escalation lives in AlertPrioritizer. The meter signature can gate false
+    positives once measurand-bearing telemetry streams live (enhancement,
+    not a blocker).
     """
 
     DETECTOR_NAME = "err1024"

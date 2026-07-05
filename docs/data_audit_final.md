@@ -170,3 +170,29 @@ path) — encoded as a Layer 1 sub-detector.
     Consequence: **UnderVoltage detection is verified on real events**
     (18/18 alerts on replay); the deck may claim one real-verified
     category beyond telemetry-silence today.
+19. **fault_ref semantics pinned by analysis (2026-07-05):** temporal join of
+    the 46 evidence windows against recovered PRABHAEV004N fault episodes
+    matches exactly one ref (5129) — to a **simultaneous both-plugs fault**
+    (13:12:20/21 on 2026-06-04), with the meter window starting ~3 min after
+    the fault. Conclusions: fault_refs are fleet-wide fault-table ids (45/46
+    belong to other stations); the windows are **post-fault meter captures**,
+    not pre-fault telemetry; no time-ordering (rank corr −0.47). Follow-on
+    finding: **88% of PRABHAEV004N fault episodes hit both plugs within 5 s**
+    — the dominant fault mode is station-level (supply/controller), now
+    encoded as the prioritizer's station-wide P1 escalation. The data-owner
+    mapping table remains a nice-to-have; nothing in Week 3 depends on it.
+20. **Temperature: formally out of scope (2026-07-05).** Third independent
+    confirmation of the dead field — the err1024 crash signature reports
+    Temperature 0.0 (min=max=mean) alongside the 142/142 zero rows in the
+    evidence windows. Decision: temperature features (peak temps, outlet
+    asymmetry) are excluded from the hackathon deliverable; code stays
+    (tested against the sampledValue contract) for a future export that
+    carries real values. No deck/demo claim references temperature.
+21. **err1024 blocker closed (2026-07-05):** the data-owner reply arrived as
+    data/raw/err1024_crash_signature.csv (3 events, aggregate stats):
+    voltage 227.4–227.9 V and frequency ~49.9 Hz nominal throughout,
+    current ≤0.3 A → 0.01 A, power ≤0.01 kW → 0, energy register flat
+    (+0.2 Wh). "Energized but never charging" — corroborates the pre-charge
+    SLAC mechanism. No retry/recovery sequencing exists, so the point-event
+    handler is **confirmed final** (Week 1 exit criterion satisfied on both
+    branches of its either/or).

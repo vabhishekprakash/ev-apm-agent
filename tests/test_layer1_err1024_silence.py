@@ -69,9 +69,9 @@ def test_err1024_ignores_other_codes_and_event_types():
     assert det.consume(start(3)) is None
 
 
-def test_err1024_fires_on_every_sighting_no_dedupe_yet():
-    # TODO(data-owner): collapses into a retry-burst rule once the escalation
-    # reply confirms the sequencing.
+def test_err1024_fires_on_every_sighting():
+    # Confirmed final: the crash-signature reply carries no retry/recovery
+    # sequencing, so every sighting fires (prioritizer handles escalation).
     det = Err1024Detector(CONN)
     assert det.consume(status(0, "Preparing", ERR_1024)) is not None
     assert det.consume(status(5, "Preparing", ERR_1024)) is not None

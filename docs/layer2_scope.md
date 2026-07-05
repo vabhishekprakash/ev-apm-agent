@@ -56,3 +56,11 @@ default −0.1), n = 2,015 held-out normals. Per-tier: heavy 3.3% / medium
   when richer features land.
 - Pooled-tier FPR (6.1%, n=148) exceeds the bar on a small sample — recheck
   after the full export.
+
+## Temperature features: closed out (2026-07-05)
+
+Out of scope for the hackathon — the field is dead at source (three
+independent confirmations, audit flags 11/20/21). The implemented features
+and tests remain in the codebase against the sampledValue contract for any
+future export that carries real temperatures; no model, metric, or pitch
+claim depends on them.
