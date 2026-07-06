@@ -29,7 +29,7 @@ flowchart LR
     end
 
     subgraph training [Offline training — Akhil's machine]
-        NS[normal_sessions.csv +<br/>recovered PRABHAEV004N history] --> NB[notebooks 03-05<br/>chronological holdout, threshold calibration,<br/>expanded-normal gate]
+        NS[normal_sessions.csv +<br/>recovered Station-A history] --> NB[notebooks 03-05<br/>chronological holdout, threshold calibration,<br/>expanded-normal gate]
         NB --> PKL[models/*.pkl committed<br/>+ index, threshold -0.1187]
     end
 

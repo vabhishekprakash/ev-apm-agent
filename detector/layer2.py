@@ -114,7 +114,7 @@ def _temp_asymmetry_features(session_meter_values: list) -> dict:
     asymmetry = abs(outlet_1 - outlet_2) at each timestamp where both outlets
     report. Returns temp_asymmetry_max / _mean / _final; all None for
     single-outlet sessions (no pairable timestamps). Calibration target:
-    ~10°C on normal PRABHAEV004N sessions.
+    ~10°C on normal Station-A sessions.
     """
     series = _temperature_series(session_meter_values)
     outlet_1 = {ts: value for ts, value in series.get("outlet_1", [])}

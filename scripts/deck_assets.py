@@ -106,10 +106,11 @@ def coverage_chart():
         for c in stream["categories"]:
             if c["category"] != "layer2_drift":
                 volumes[c["category"]] = volumes.get(c["category"], 0) + c["alerts"]
-    status = {  # verification provenance (audit flag 18)
+    status = {  # verification provenance (audit flags 18, 22)
         "UnderVoltage": "real events (18/18)", "telemetry-silence": "real + unit tests",
-        "err1051": "fixture (sequences absent from cap)", "err1024": "fixture",
-        "WeakSignal": "fixture", "GroundFailure": "fixture", "OverVoltage": "fixture",
+        "err1051": "fixture + real recovery stats", "err1024": "fixture + crash signature",
+        "WeakSignal": "real events (150/150)", "GroundFailure": "real events (79,480/79,480)",
+        "OverVoltage": "real events (51/51)",
     }
     cats = sorted(volumes, key=volumes.get)
     colors = [BLUE if "real" in status.get(c, "") else GREY for c in cats]

@@ -19,7 +19,7 @@ Reproduce via `notebooks/01_data_audit.ipynb` once the reference CSVs are in
   (12 stations list `connectorId=0`, which is charge-point-level, not a socket).
 - Station shapes: 10 single-connector, 17 two-connector, 12 with `0,1,2`.
 - **23,084 normal (fault-free) sessions across 46 active connectors.**
-- PRABHAEV004N dominates with ~4,439 normal sessions (~19% of fleet volume) —
+- Station-A dominates with ~4,439 normal sessions (~19% of fleet volume) —
   downsample or train strictly per-connector to avoid dominance.
 
 ## Session-volume tiers (Layer 2 viability)
@@ -38,13 +38,13 @@ majority; pooled cohort baseline for the other 11.
 ## Vendor / firmware diversity
 
 Tucker 11, Siemens family (SIEMENS + CN.TH on Siemens firmware) 12, IONGRID 5,
-ACS family 5, Exicom 3, PRABHAEV self-named 2, unknown 1.
+ACS family 5, Exicom 3, operator self-named (VENDOR-P*) 2, unknown 1.
 **11 distinct vendor strings, 19 distinct firmware versions** — the
 vendor-agnostic pitch is evidenced, not aspirational.
 
 ## Fault labels
 
-**Two labeled fault events total**, both on PRABHAEV004N, 7 minutes apart,
+**Two labeled fault events total**, both on Station-A, 7 minutes apart,
 different connectors:
 
 - `system-err1051` (GQ_DIN_ERROR_INIT_SOCKET): reproducible 5-step sequence —
@@ -64,7 +64,7 @@ path) — encoded as a Layer 1 sub-detector.
 1. One `chargepoint` row with NaN vendor/model/firmware (valid coords +
    registration). Week 1 decision: impute `"unknown"`; revisit if it affects
    Layer 2 cohorting.
-2. PRABHAEV004N has 1 normal session on `connectorId=0` — malformed
+2. Station-A has 1 normal session on `connectorId=0` — malformed
    StartTransaction; drop from training, flag to data owner.
 3. 7 chargers registered after Feb 2026 — short history, likely sparse tier
    regardless of activity.
@@ -86,7 +86,7 @@ path) — encoded as a Layer 1 sub-detector.
 7. The delivered `normal_sessions.csv` has **10,090 sessions across 38
    connectors (28 stations)** — not the 23,084 sessions / 46 active connectors
    from the Week 1 audit. The window matches (2026-04-01 → 2026-06-30) and the
-   stray `connectorId=0` session is present, but PRABHAEV004N's ~4,439-session
+   stray `connectorId=0` session is present, but Station-A's ~4,439-session
    block is absent (max per-connector count in the file is 1,047). Either the
    audit counted differently or this export is partial — confirm with the data
    owner before treating the tier table above as reproducible. Tiers
@@ -97,16 +97,16 @@ path) — encoded as a Layer 1 sub-detector.
    chargepoint from flag 1. `chargepoint.csv` likewise has 20 fw_version
    values including the null.
 
-### New-delivery flags (added 2026-07-04: master_training_set.csv + recovered_PRABHAEV004N_sessions.csv)
+### New-delivery flags (added 2026-07-04: master_training_set.csv + recovered_station_a_sessions.csv)
 
-9. **PRABHAEV004N identity correction.** `sha256("PRABHAEV004N")` =
-   `0c70c6b0…` — vendor **CN.TH**, connector_pks **2009529 (plug 1), 2009530
+9. **Station-A identity correction.** Station-A (alias; charge-box hash
+   `0c70c6b0…`) — vendor **CN.TH**, connector_pks **2009529 (plug 1), 2009530
    (plug 2), 2013696 (plug 0 — the connectorId=0 anomaly, 799 status rows /
    145 fault episodes of its own)**. Earlier Week-1 docs, fixtures, and PR
-   text mislabeled station `d4416bd8…` (vendor PRABHAEV1, pks 4784325/5802030)
-   as PRABHAEV004N. Reference files were always internally consistent; only
+   text mislabeled station `d4416bd8…` (vendor VENDOR-P1, pks 4784325/5802030)
+   as Station-A. Reference files were always internally consistent; only
    our labels were wrong. Fixture data is synthetic and unaffected; per-connector
-   IsoForest models for the real PRABHAEV004N (`isoforest_0c70c6b0…_1/_2.pkl`)
+   IsoForest models for the real Station-A (`isoforest_0c70c6b0…_1/_2.pkl`)
    exist and were trained on its 861/880 delivered sessions.
 10. **Fault-evidence windows (master_training_set.csv, 852 rows, 46 fault
     events, June 2026).** Six measurands per event (V/A/kW/Wh/Hz/°C). During
@@ -123,7 +123,7 @@ path) — encoded as a Layer 1 sub-detector.
     asymmetry) remain unvalidatable on real data, and would train as all-zero
     garbage if fed this export. Logged as a red-flag Issue per the Day-5
     joint checklist.
-12. **Recovered PRABHAEV004N status history (41,183 rows, 2025-10-03 →
+12. **Recovered Station-A status history (41,183 rows, 2025-10-03 →
     2026-07-04)** substantially fills flag 7's missing block: ~4,715 charging
     episodes ≈ the audited ~4,439 sessions (longer window). Fault reality on
     this station: **2,041 Faulted episodes** (946 + 950 + 145 per connector),
@@ -171,13 +171,13 @@ path) — encoded as a Layer 1 sub-detector.
     (18/18 alerts on replay); the deck may claim one real-verified
     category beyond telemetry-silence today.
 19. **fault_ref semantics pinned by analysis (2026-07-05):** temporal join of
-    the 46 evidence windows against recovered PRABHAEV004N fault episodes
+    the 46 evidence windows against recovered Station-A fault episodes
     matches exactly one ref (5129) — to a **simultaneous both-plugs fault**
     (13:12:20/21 on 2026-06-04), with the meter window starting ~3 min after
     the fault. Conclusions: fault_refs are fleet-wide fault-table ids (45/46
     belong to other stations); the windows are **post-fault meter captures**,
     not pre-fault telemetry; no time-ordering (rank corr −0.47). Follow-on
-    finding: **88% of PRABHAEV004N fault episodes hit both plugs within 5 s**
+    finding: **88% of Station-A fault episodes hit both plugs within 5 s**
     — the dominant fault mode is station-level (supply/controller), now
     encoded as the prioritizer's station-wide P1 escalation. The data-owner
     mapping table remains a nice-to-have; nothing in Week 3 depends on it.
@@ -196,3 +196,23 @@ path) — encoded as a Layer 1 sub-detector.
     SLAC mechanism. No retry/recovery sequencing exists, so the point-event
     handler is **confirmed final** (Week 1 exit criterion satisfied on both
     branches of its either/or).
+22. **Taxonomy + fault-event exports delivered and committed (2026-07-06):**
+    `data/reference/error_taxonomy.csv` (17,954 rows, 19 OCPP categories,
+    17,857 distinct vendor codes — one embedded RFID idTag value redacted
+    before commit per governance) and
+    `data/reference/missing_real_faults.csv` (79,681 rows after dropping one
+    truncated trailing line; GroundFailure 79,480 / WeakSignal 150 /
+    OverVoltage 51 across 113 connectors in a separate pk namespace, no
+    inventory overlap — enrichment lookups miss by design until the mapping
+    arrives). Results: **normalizer coverage 100% resolved to labeled
+    categories** (0% unlabeled residue; only 0.9% decided by shape rules —
+    the fleet's vendor codes are 99% freeform, so the labeled error_code
+    field carries the routing; pitch reframed accordingly per SPEC risk 2).
+    **Real-event detection 100% per category**; WeakSignal bursts (6→P2)
+    and OverVoltage 24h repeats (32→P1) escalated on real-world patterns.
+    Real-verified categories now 5 of 6; the err1051/err1024 status
+    sequences remain absent from every delivered export
+    (fixture + crash-signature verified). Note: 79,480 GroundFailure P1s
+    in 14 months on one fleet segment = chattering sensor cohort —
+    dedup/rate-limiting is a documented future-work item, out of scope
+    (Week 3 freeze).

@@ -24,7 +24,7 @@ CONSECUTIVE_DRIFT_THRESHOLD = 3
 VOLTAGE_REPEAT_WINDOW = timedelta(hours=24)
 BURST_WINDOW = timedelta(minutes=5)
 BURST_THRESHOLD = 5  # >5 events in BURST_WINDOW escalates WeakSignal
-# 88% of PRABHAEV004N fault episodes hit both plugs within 5s (audit flag
+# 88% of Station-A fault episodes hit both plugs within 5s (audit flag
 # 19) — near-simultaneous faults on different connectors of one station are
 # a supply/controller-side outage, the most dispatch-relevant pattern.
 STATION_WIDE_WINDOW = timedelta(seconds=60)

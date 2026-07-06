@@ -9,7 +9,7 @@ implementation was verified meanwhile.
 
 ## What real data shows so far
 
-- **Recovered PRABHAEV004N history** (41k rows): 2,041 `Faulted` episodes
+- **Recovered Station-A history** (41k rows): 2,041 `Faulted` episodes
   with clear burst structure and a wide recovery spread (median 33 s, p75
   ~245 s — audit flag 12), but **no error codes** — categories
   indistinguishable in this file. It proves fault episodes cluster and

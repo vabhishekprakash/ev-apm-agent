@@ -28,6 +28,9 @@ sys.path.insert(0, str(ROOT / "detector"))
 from vendor_code_normalizer import normalize  # noqa: E402
 
 STREAMS = [
+    ("real fault-event export (79,681 rows)", "data/interim/fault_replay",
+     "REAL events: GroundFailure/WeakSignal/OverVoltage (regenerate adapter from"
+     " data/reference/missing_real_faults.csv; see audit flag 22)"),
     ("day5 fixture (err1051/err1024/silence)", "tests/fixtures/day5_replay", "synthetic fixture"),
     ("day4 fixture (WeakSignal/Ground/Voltage)", "tests/fixtures/day4_multicategory", "synthetic fixture"),
     ("capped 90-day export", "data/raw",
@@ -71,6 +74,8 @@ def observed_events(data_dir: Path) -> Counter:
 def main() -> None:
     summary = []
     for label, data_dir, provenance in STREAMS:
+        if not (ROOT / data_dir).exists():
+            continue  # local-only streams (data/interim) may be absent
         alerts = replay(data_dir)
         events = observed_events(ROOT / data_dir)
         per_category: dict[str, dict] = defaultdict(
