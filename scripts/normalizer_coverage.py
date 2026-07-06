@@ -36,43 +36,53 @@ def main() -> int:
               " — Errornotify delivery pending); nothing to measure")
         return 1
 
+    from vendor_code_normalizer import FAMILY_TABLE, HEX_TABLE
     load_taxonomy_table(path)
 
     by_family: Counter = Counter()
-    routed_named = routed_fallback = other = 0
-    weighted = Counter()
+    rule_decided = labeled_fallback = default_other = 0
+    seen: set = set()
     with path.open(newline="", encoding="utf-8-sig") as f:
         for row in csv.DictReader(f):
             vendor = (row.get("vendor_error_code") or "").strip()
             error_code = (row.get("error_code") or "").strip()
-            occurrences = int(row.get("occurrence") or row.get("count") or 1)
+            if vendor in seen:
+                continue  # coverage is over DISTINCT vendor codes
+            seen.add(vendor)
             family = rule_family(vendor)
             by_family[family] += 1
             category = normalize(vendor, error_code)
-            if category == "OtherError":
-                other += 1
-                weighted["other"] += occurrences
-            elif category in STANDARD_CATEGORIES and category != error_code:
-                routed_named += 1          # a rule decided, not the fallback
-                weighted["rules"] += occurrences
+            # Which path decided? Shape rules and taxonomy-fed lookup tables
+            # count as rule-routed; the error_code field is the labeled
+            # fallback; OtherError with no label is the true residue.
+            rule_hit = (
+                family in ("prefix", "voltage-reading")
+                or (family == "hex" and vendor.lower() in HEX_TABLE)
+                or (family in ("er_num", "c_num", "num_num", "alarm_err")
+                    and vendor.upper() in FAMILY_TABLE)
+            )
+            if rule_hit and category in STANDARD_CATEGORIES:
+                rule_decided += 1
+            elif category in STANDARD_CATEGORIES or (
+                    category == error_code and error_code):
+                labeled_fallback += 1
             else:
-                routed_fallback += 1       # fell through to the labeled field
-                weighted["fallback"] += occurrences
+                default_other += 1
 
-    total = routed_named + routed_fallback + other
+    total = rule_decided + labeled_fallback + default_other
+    resolved = rule_decided + labeled_fallback
     print(f"taxonomy: {path} — {total} distinct vendor codes")
-    print(f"routed by rules:        {routed_named:6d} ({routed_named / total:.1%})")
-    print(f"fallback to error_code: {routed_fallback:6d} ({routed_fallback / total:.1%})")
-    print(f"OtherError residue:     {other:6d} ({other / total:.1%})")
-    if weighted:
-        w_total = sum(weighted.values())
-        print(f"occurrence-weighted: rules {weighted['rules'] / w_total:.1%}, "
-              f"fallback {weighted['fallback'] / w_total:.1%}, "
-              f"other {weighted['other'] / w_total:.1%}")
+    print(f"rule-decided (shape rules + taxonomy tables): {rule_decided:6d} "
+          f"({rule_decided / total:.1%})")
+    print(f"labeled fallback (error_code field):          {labeled_fallback:6d} "
+          f"({labeled_fallback / total:.1%})")
+    print(f"unlabeled OtherError residue:                 {default_other:6d} "
+          f"({default_other / total:.1%})")
+    print(f"\nRESOLVED to a labeled category (gate metric): {resolved / total:.1%}")
     print("\nrule-family shape distribution:")
     for family, count in by_family.most_common():
         print(f"  {family:18s} {count}")
-    return 0
+    return 0 if resolved / total >= 0.80 else 1
 
 
 if __name__ == "__main__":

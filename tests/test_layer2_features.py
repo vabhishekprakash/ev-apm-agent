@@ -3,7 +3,7 @@
 Real exports lack the measurand/location columns until the Workbench
 re-export lands (audit flag 6), so per the SPEC Day 4 Joint fallback these
 sessions are synthetic, shaped like OCPP 1.6 sampledValue rows and
-calibrated to the documented PRABHAEV004N behaviour (~10°C steady outlet
+calibrated to the documented Station-A behaviour (~10°C steady outlet
 asymmetry on normal sessions).
 """
 
@@ -33,7 +33,7 @@ def energy(offset_s: float, wh: float) -> dict:
 
 
 def dual_outlet_session() -> list:
-    """Normal PRABHAEV004N-shaped session: body warms to mid-40s, outlet 1
+    """Normal Station-A-shaped session: body warms to mid-40s, outlet 1
     runs ~10°C hotter than outlet 2 throughout, plus non-temperature noise."""
     samples = []
     for i, offset in enumerate(range(0, 1800, 300)):  # 30 min, 5 min cadence
@@ -81,7 +81,7 @@ def test_peak_temps_all_none_without_temperature_measurand():
 def test_asymmetry_matches_10c_calibration_target():
     features = _temp_asymmetry_features(dual_outlet_session())
     assert 0.0 <= features["temp_asymmetry_max"] <= 30.0
-    # ~10°C observed on normal PRABHAEV004N sessions
+    # ~10°C observed on normal Station-A sessions
     assert 8.0 <= features["temp_asymmetry_mean"] <= 12.0
     assert features["temp_asymmetry_final"] <= features["temp_asymmetry_max"]
 

@@ -88,3 +88,7 @@ tmp/
 # ===== Local overrides =====
 local_config.py
 config.local.yaml
+# ===== Personal workspace tooling (never commit) =====
+.claude/
+.obsidian/
+graphify-out/

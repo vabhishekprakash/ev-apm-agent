@@ -104,7 +104,7 @@ Detector exposes per-connector feature trends over time: temp asymmetry, peak te
 Per-connector panel in UI: pick a connector, see feature trend lines over session history with anomaly-flagged sessions marked. Chart.js via CDN or server-rendered SVG. **Temp-asymmetry trend is the money shot** — it's the concrete, intuitive signal.
 
 **Task 3: Pick the demo connector (15 min)**
-Identify the single most demo-worthy connector — visible drift trend + known faults + high session volume. `PRABHAEV004N` is the leading candidate (has both err1051 and err1024, ~4,439 normal sessions). Document choice and rationale.
+Identify the single most demo-worthy connector — visible drift trend + known faults + high session volume. `Station-A` is the leading candidate (has both err1051 and err1024, ~4,439 normal sessions). Document choice and rationale.
 
 **Acceptance:** judge can select a connector and see its degradation trend visually.
 

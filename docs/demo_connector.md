@@ -1,6 +1,6 @@
 # Demo connector choice (Week 2 Day 2, Akhil Task 3)
 
-**Chosen: connector_pk 2009529 — PRABHAEV004N plug 1**
+**Chosen: connector_pk 2009529 — Station-A plug 1**
 (station hash `0c70c6b0…`, vendor CN.TH — identity per audit flag 9)
 
 ## Rationale

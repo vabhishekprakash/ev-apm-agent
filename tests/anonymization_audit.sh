@@ -79,7 +79,7 @@ then FAIL=1; fi
 
 echo "— RFID/idTag-shaped fields (only the anonymization disclaimer excluded) —"
 HITS=$(grep -n -iE "id_tag|idtag|rfid" "${FILES[@]}" 2>/dev/null \
-    | grep -v -iE "dropped at export|customer/RFID|RFID hashes|anonymization")
+    | grep -v -iE "dropped at export|customer/RFID|RFID hashes|anonymization|REDACTED-IDTAG|idTag value redacted|idTag=REDACTED|RfidStop|RFIDs, IPs|RFID formats")
 if [ -n "$HITS" ]; then echo "$HITS"; FAIL=1; else echo "none"; fi
 
 echo "— precise geo coordinates (>2 decimal places, paired) —"

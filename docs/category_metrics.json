@@ -1,5 +1,47 @@
 [
   {
+    "stream": "real fault-event export (79,681 rows)",
+    "provenance": "REAL events: GroundFailure/WeakSignal/OverVoltage (regenerate adapter from data/reference/missing_real_faults.csv; see audit flag 22)",
+    "total_alerts": 79681,
+    "categories": [
+      {
+        "category": "GroundFailure",
+        "events_observed": 79480,
+        "alerts": 79480,
+        "detection_rate": 1.0,
+        "priority_distribution": {
+          "P1": 79480
+        },
+        "time_to_alert_s": 0,
+        "note": "fires on the event itself"
+      },
+      {
+        "category": "OverVoltage",
+        "events_observed": 51,
+        "alerts": 51,
+        "detection_rate": 1.0,
+        "priority_distribution": {
+          "P2": 19,
+          "P1": 32
+        },
+        "time_to_alert_s": 0,
+        "note": "fires on the event itself"
+      },
+      {
+        "category": "WeakSignal",
+        "events_observed": 150,
+        "alerts": 150,
+        "detection_rate": 1.0,
+        "priority_distribution": {
+          "P3": 144,
+          "P2": 6
+        },
+        "time_to_alert_s": 0,
+        "note": "fires on the event itself"
+      }
+    ]
+  },
+  {
     "stream": "day5 fixture (err1051/err1024/silence)",
     "provenance": "synthetic fixture",
     "total_alerts": 4,

@@ -7,6 +7,15 @@ sequences and the remaining target categories are fixture-verified until
 the full fault-event export lands. Rows are provenance-labeled.
 
 
+## real fault-event export (79,681 rows)  
+*REAL events: GroundFailure/WeakSignal/OverVoltage (regenerate adapter from data/reference/missing_real_faults.csv; see audit flag 22)* — 79681 alerts
+
+| category | events | alerts | detection | tiers | latency | note |
+|---|---|---|---|---|---|---|
+| GroundFailure | 79480 | 79480 | 100% | P1:79480 | 0s | fires on the event itself |
+| OverVoltage | 51 | 51 | 100% | P1:32, P2:19 | 0s | fires on the event itself |
+| WeakSignal | 150 | 150 | 100% | P2:6, P3:144 | 0s | fires on the event itself |
+
 ## day5 fixture (err1051/err1024/silence)  
 *synthetic fixture* — 4 alerts
 

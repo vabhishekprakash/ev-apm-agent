@@ -55,7 +55,7 @@ Every number below passed the honesty audit (bottom of file).
 ## 7. Demo *(UX)*
 - Live UI: replay streaming, P1/P2/P3 color-coded feed with deciding
   signals, summary header, per-connector drift panel on the demo connector
-  (PRABHAEV004N plug 1 — 946 real fault episodes).
+  (Station-A plug 1 — 946 real fault episodes).
 
 ## 8. Deployment *(Scalability)*
 - Sidecar container beside the operator's existing CMS — subscribes to the
@@ -79,7 +79,7 @@ Every number below passed the honesty audit (bottom of file).
 | FPR 3.62% | Measured, chronological holdout, notebook 04, n=2,015. Deployed threshold −0.1187. Defensible by both presenters. |
 | "2.77M fault events / 19 categories" | From the CMS taxonomy table cited in the Week 2 spec; **Errornotify.csv not yet delivered to the repo** — slide carries "per CMS error taxonomy" provenance until it lands. Framed as "operates across the observed fault taxonomy", NOT "trained on 2.77M faults". |
 | "6 of 19 categories" | 3 live today + 3 implemented against documented patterns pending the fault-event export — slide 6 says "target", flips to "detected" only after Day 4–5 verification on real events. |
-| "~42% self-recover ≤15 s" | Measured on 2,041 recovered PRABHAEV004N episodes (audit flag 12). Replaces the older "13-second transient" story, which described the fast quartile only. |
+| "~42% self-recover ≤15 s" | Measured on 2,041 recovered Station-A episodes (audit flag 12). Replaces the older "13-second transient" story, which described the fast quartile only. |
 | Temperature/asymmetry claims | **None** — temperature field is dead in real data (flag 11). |
 | 23,084 sessions | Stated as "audited at source"; modeling claims use the delivered 10,090 only. |
 

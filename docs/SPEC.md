@@ -58,7 +58,7 @@ def _temp_asymmetry_features(session_meter_values: list) -> dict:
     # returns: temp_asymmetry_max, temp_asymmetry_mean, temp_asymmetry_final
     # asymmetry = abs(outlet_1_temp - outlet_2_temp) per timestamp
 ```
-Only computable for two-connector stations reporting both outlets. Return None for single-outlet sessions. Reference the ~10°C observed asymmetry as the calibration target — you should see this range on normal sessions from `PRABHAEV004N`.
+Only computable for two-connector stations reporting both outlets. Return None for single-outlet sessions. Reference the ~10°C observed asymmetry as the calibration target — you should see this range on normal sessions from `Station-A`.
 
 **Task 3: Unit test both features on real data (30 min)**
 Load one normal session from `data/raw/meter_values_*.csv` (once available). Run both feature functions. Assert types and reasonable value ranges (body temp 20–60°C, outlet temp 20–90°C, asymmetry 0–30°C). Write assertions in `tests/test_layer2_features.py`.
@@ -257,7 +257,7 @@ Copy this to a GitHub Issue titled `Week 1 exit criteria` and check off:
 - **Lead-time verdict: negative** (lift 0.57× — docs/layer2_leadtime.md).
   The pitch line is "orthogonal degradation tracking". Re-evaluate only if
   the measurand re-export enables richer features.
-- **Identity correction:** PRABHAEV004N = hash 0c70c6b0…, CN.TH, connectors
+- **Identity correction:** Station-A (alias) = charge-box hash 0c70c6b0…, CN.TH, connectors
   2009529/2009530 (+ plug-0 2013696). Week 1 materials mislabeled d4416bd8….
 - **Deck outline v1** (honesty-audited) and **demo script v2** (two-source
   runbook, dry-run #1 proven) committed; UI must-fix list in

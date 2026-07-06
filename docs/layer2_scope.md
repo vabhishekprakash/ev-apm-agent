@@ -22,11 +22,11 @@ and which fall back to the pooled cohort baseline.
 
 ## Guardrails
 
-- **PRABHAEV004N (~4,439 sessions, ~19% of fleet volume) must not dominate the
+- **Station-A (~4,439 sessions, ~19% of fleet volume) must not dominate the
   pooled model** — train pooled baselines with per-connector downsampling caps.
 - The 7 chargers registered after Feb 2026 land in marginal/sparse by
   construction; do not read their tier as a health signal.
-- Drop the single `connectorId=0` session on PRABHAEV004N from all training.
+- Drop the single `connectorId=0` session on Station-A from all training.
 
 ## Decision update (Week 2 Day 1, 2026-07-04) — cohort vs global pooling
 

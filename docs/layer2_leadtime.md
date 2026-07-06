@@ -5,7 +5,7 @@ backup framing — "orthogonal degradation tracking" — not early warning.**
 
 ## Method (notebook 05)
 
-- 3,484 sessions reconstructed from the recovered PRABHAEV004N status history
+- 3,484 sessions reconstructed from the recovered Station-A status history
   (Charging-episode boundaries; 60 s–24 h sanity bounds), connectors
   2009529/2009530, Oct 2025 → Jul 2026.
 - 1,896 Layer-1-visible fault episodes (Faulted transitions) on the same
