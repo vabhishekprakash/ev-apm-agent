@@ -36,9 +36,26 @@ We'll prove it on real data from 39 stations across 5+ vendors, deployed as a dr
 | `docs/` | Architecture, methodology, and runbooks |
 | `tests/` | Unit and integration tests |
 
+## Where to find things
+
+| You want… | Path |
+|-----------|------|
+| **The full write-up** (problem, methods, results, deployment) | [`docs/detailed_document.md`](docs/detailed_document.md) |
+| **How to run and manually test it** (step-by-step) | [`docs/RUNBOOK.md`](docs/RUNBOOK.md) |
+| Architecture diagram | [`docs/architecture_v2.svg`](docs/architecture_v2.svg) ([source](docs/architecture_v2.mmd)) |
+| Data audit & provenance (numbered flags) | [`docs/data_audit_final.md`](docs/data_audit_final.md) |
+| Layer 2 modeling & tier/pooling decisions | [`docs/layer2_scope.md`](docs/layer2_scope.md) |
+| Multi-category detection audit | [`docs/multicategory_audit.md`](docs/multicategory_audit.md) |
+| Lead-time analysis (honest negative result) | [`docs/layer2_leadtime.md`](docs/layer2_leadtime.md) |
+| Per-category detection metrics | [`docs/category_metrics.md`](docs/category_metrics.md) |
+| FPR & coverage charts | [`docs/assets/`](docs/assets/) |
+| Pitch deck outline & speaker pack | [`docs/deck_outline.md`](docs/deck_outline.md), [`docs/slides_speaker_pack.md`](docs/slides_speaker_pack.md) |
+| Demo narration script | [`docs/demo_script.md`](docs/demo_script.md) |
+| Future work (scope-freeze ledger) | [`docs/future_work.md`](docs/future_work.md) |
+
 ## Architecture
 
-![Architecture v1](docs/architecture_v1.png)
+![Architecture v2](docs/architecture_v2.svg)
 
 Two-layer detection: **Layer 1** — deterministic fault-sequence state
 machines (err1051), point-event category detectors (err1024, WeakSignal,
@@ -67,8 +84,10 @@ Local pipeline without Docker:
 
 ```bash
 REPLAY_SPEED_MULTIPLIER=0 python replay/main.py | python detector/main.py
-python -m pytest tests/    # 57 tests
+python -m pytest tests/    # 60 tests
 ```
+
+Full step-by-step run + manual-test instructions: [`docs/RUNBOOK.md`](docs/RUNBOOK.md).
 
 Headline metric: **3.62% false-positive rate** on a chronological held-out
 split (notebook 04); alert thresholds documented in `.env.example`.
@@ -81,5 +100,5 @@ integration) and Akhil Prasad (Layer 2 + data audit).
 Data provenance: anonymized OCPP telemetry exports from a production
 charging-management system (charge-box ids SHA-256-hashed, geo coordinates
 rounded, customer/RFID/IP fields dropped at export). Raw exports are never
-committed — see `.gitignore` and `docs/data_audit_v0.md` for the audit trail.
-MIT licensed.
+committed — see `.gitignore` and [`docs/data_audit_final.md`](docs/data_audit_final.md)
+for the audit trail. MIT licensed.

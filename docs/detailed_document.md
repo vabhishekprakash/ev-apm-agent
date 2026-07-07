@@ -80,9 +80,9 @@ UI renders a live operator dashboard. No cloud dependency.
 Anonymized OCPP telemetry exports from a production CMS. Governance is
 enforced in-repo: raw CMS data is never committed (gitignored), charge-box
 IDs ship as SHA-256 hashes, geo coordinates are rounded to ~1 km, and
-customer / RFID / IP fields are dropped at export. A committed audit script
+customer/RFID/IP fields are dropped at export. A committed audit script
 (`tests/anonymization_audit.sh`) gates the repo and **caught real PII in a
-delivered taxonomy before commit** — 16,260 RFID card-tag values, 3,807
+delivered taxonomy before commit** — 16,260 card-tag values, 3,807
 subscriber-phone rows, and 950 routable IPs, all masked (audit flag 22).
 
 Fleet observed: **39 stations, 80 connectors, 12 vendor brands, 19 firmware
@@ -203,5 +203,5 @@ Tracked in full in `docs/future_work.md`. Highlights:
 | Akhil Prasad | Layer 2 modeling, data audit, taxonomy + normalization, evaluation notebooks |
 
 *Provenance: anonymized OCPP telemetry from a production charging-management
-system. Charge-box IDs SHA-256-hashed; geo rounded; customer / RFID / IP
+system. Charge-box IDs SHA-256-hashed; geo rounded; customer/RFID/IP
 dropped at export. Raw exports are never committed. MIT licensed.*

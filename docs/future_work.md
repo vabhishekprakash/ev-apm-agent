@@ -1,6 +1,6 @@
 # Future work (scope-freeze ledger — Week 3 Day 1)
 
-Scope froze at Week 3 Day 1 per `docs/week3_days1to6.md`. Everything below is
+Scope froze at Week 3 Day 1 per the Week 3 plan. Everything below is
 explicitly OUT of the submission; proposals from here to submission day land
 in this file, not in code.
 

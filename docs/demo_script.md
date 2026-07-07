@@ -1,6 +1,6 @@
 # Demo script v2 — 3–4 min narrated walkthrough (revised after dry-run #1)
 
-Setup before recording (two-source runbook, see docs/demo_dryrun_w2.md):
+Setup before recording (two-source runbook):
 1. `docker compose down -v && MSYS_NO_PATHCONV=1 DATA_DIR=/app/data/raw
    REPLAY_SPEED_MULTIPLIER=60 docker compose up` — real replay populates
    drift panel + real UnderVoltage/silence alerts.
