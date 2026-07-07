@@ -1,0 +1,163 @@
+# RUNBOOK — run & manually test the EV APM Agent
+
+A step-by-step guide for a human operator to start the system and verify every
+feature by hand. Two ways to run it: **Docker** (recommended, one command) or
+a **local Python pipeline**. No cloud, no external services.
+
+> All commands are copy-paste ready. On Windows use **Git Bash**; where a
+> command feeds a container a `/app/...` path through an env var, keep the
+> `MSYS_NO_PATHCONV=1` prefix shown — it stops Git Bash from rewriting the
+> path.
+
+---
+
+## 0. Prerequisites
+
+- **Docker Desktop** running (for the container path), **or** Python 3.11+
+  with `pip install pydantic scikit-learn==1.7.2 fastapi uvicorn` (for the
+  local path).
+- Port **8000** free (the UI binds it).
+
+Verify Docker is up:
+```bash
+docker version --format '{{.Server.Version}}'   # prints a version = daemon ready
+```
+
+---
+
+## 1. Start it (Docker — recommended)
+
+From the repo root:
+
+```bash
+cp .env.example .env
+docker compose up -d --build
+```
+
+Wait ~30 s, then confirm all services are healthy and the UI answers:
+
+```bash
+docker compose ps                                   # replay / detector / ui
+curl -s -o /dev/null -w "%{http_code}\n" http://localhost:8000/   # expect 200
+```
+
+Open **http://localhost:8000** in a browser. By default the pipeline replays
+whatever is mounted at `data/raw` (empty in a fresh public clone — see §3 to
+drive it with the bundled fixtures).
+
+Stop / reset:
+```bash
+docker compose down -v      # -v clears the event-bus volume between runs
+```
+
+---
+
+## 2. Start it (local Python, no Docker)
+
+```bash
+# one-shot: replay a fixture through the detector, alerts print as JSON lines
+REPLAY_SPEED_MULTIPLIER=0 DATA_DIR=tests/fixtures/demo_replay \
+  python replay/main.py | python detector/main.py
+```
+
+To see it in the **UI** locally, run the UI in one terminal and the pipeline
+in another:
+
+```bash
+# terminal 1 — dashboard
+cd ui && python -m uvicorn main:app --port 8000
+
+# terminal 2 — drive the dashboard (all six fault categories)
+DATA_DIR=tests/fixtures/demo_replay REPLAY_SPEED_MULTIPLIER=0 \
+  python replay/main.py | (cd detector && \
+  ALERT_SINK=http ALERT_URL=http://localhost:8000/alerts python main.py)
+```
+
+Open **http://localhost:8000**.
+
+---
+
+## 3. Manual feature tests
+
+The repo ships three synthetic fixtures under `tests/fixtures/` (real CMS data
+is gitignored). Each drives a specific feature. Use the Docker form
+(`MSYS_NO_PATHCONV=1 DATA_DIR=/app/tests/fixtures/<name> ... docker compose up`)
+or the local two-terminal form from §2 with `DATA_DIR=tests/fixtures/<name>`.
+
+### 3a. All six fault categories fire  →  `demo_replay`
+```bash
+docker compose down -v
+MSYS_NO_PATHCONV=1 DATA_DIR=/app/tests/fixtures/demo_replay \
+  REPLAY_SPEED_MULTIPLIER=0 docker compose up -d --build
+sleep 20
+curl -s "http://localhost:8000/alerts?limit=100" | python -c \
+  "import json,sys,collections;\
+c=collections.Counter((a.get('fault_category') or a['detector_source']) for a in json.load(sys.stdin));\
+print(dict(c))"
+```
+**Expect:** err1051, err1024, telemetry_silence, WeakSignal, GroundFailure,
+Under/OverVoltage all present. In the browser they appear as color-coded rows
+and as chips in the coverage bar ("N of 19 OCPP categories seen").
+
+### 3b. Prioritization + the 13-second downgrade (the money shot)  →  `day5_replay`
+```bash
+docker compose down -v
+MSYS_NO_PATHCONV=1 DATA_DIR=/app/tests/fixtures/day5_replay \
+  REPLAY_SPEED_MULTIPLIER=0 docker compose up -d --build
+```
+In the UI feed, verify the **deciding-signal** column:
+- an **err1051** row is **grey P3** with *"self-recovered in 13s"* — the
+  transient that gets auto-suppressed;
+- a **telemetry_silence** row is **red P1** with *"active session dark for …s"*.
+
+Click the **"sort: tier"** toggle to flip tier↔newest ordering; click a
+**category chip** to filter the feed to one category.
+
+### 3c. Per-connector drift panel
+Drive any stream, then in the UI pick a connector in the **drift** dropdown.
+**Expect:** a score trend line with red dots on flagged sessions, a threshold
+line, and a duration pane below. (With the bundled fixtures the drift panel is
+sparse; it fills densely when driven by real session history.)
+
+### 3d. Alert-sink toggle
+- `ALERT_SINK=stdout` (default local) — alerts print as JSON lines.
+- `ALERT_SINK=http` — alerts POST to the UI (`ALERT_URL`). Shown in §2/§3.
+
+---
+
+## 4. Verify correctness (automated)
+
+```bash
+python -m pytest tests/ -q            # 60 tests, all pass
+bash tests/anonymization_audit.sh     # data-governance gate → PASS
+bash scripts/run_all_tests.sh         # everything above in one shot
+```
+
+Regenerate the measured artifacts (optional; needs pandas + scikit-learn):
+```bash
+python scripts/category_metrics.py    # docs/category_metrics.{md,json}
+python scripts/deck_assets.py         # docs/assets/fpr_chart.png, category_coverage.png
+python scripts/normalizer_coverage.py # vendor-code coverage (needs error_taxonomy.csv)
+```
+
+---
+
+## 5. Troubleshooting
+
+| Symptom | Fix |
+|--------|-----|
+| `docker compose` can't reach the daemon | Start Docker Desktop; wait for `docker version` to print a Server version. |
+| UI shows no alerts | The detector waits for UI health before POSTing; give it ~20 s, or `docker compose restart detector`. |
+| Replay says "0 events" and a `C:/Program Files/Git/app/...` path in logs | Git Bash rewrote the container path — prefix the command with `MSYS_NO_PATHCONV=1`. |
+| Port 8000 in use | Stop the other process, or change the host port in `docker-compose.yml`. |
+| Reset between demo runs | `docker compose down -v` (the `-v` clears the event-bus volume). |
+
+---
+
+## 6. What "good" looks like
+
+A clean end-to-end run shows: alerts streaming into the UI within ~2 s of
+replay, color-coded P1/P2/P3 with plain-language deciding signals, the coverage
+bar counting categories, and the drift panel rendering a score trend. That is
+the whole product in one screen — see `docs/demo_script.md` for the narrated
+walkthrough.
