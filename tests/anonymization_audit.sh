@@ -17,7 +17,8 @@ cd "$(dirname "$0")/.." || exit 2
 export LC_ALL=C   # grep -P requires a unibyte/UTF-8 locale on Git Bash
 FAIL=0
 
-mapfile -t FILES < <(git ls-files | grep -v -E '\.(pkl|png|gif|jpg|ico|svg)$')
+mapfile -t FILES < <(git ls-files | grep -v -E '\.(pkl|png|gif|jpg|ico|svg)$' |
+    grep -v -E '^tests/anonymization_audit\.sh$')  # the detector itself
 
 echo "— policy check: charge-box columns in committed CSVs are 64-hex only —"
 if ! py - <<'PYEOF'
@@ -77,10 +78,42 @@ print("none")
 PYEOF
 then FAIL=1; fi
 
-echo "— RFID/idTag-shaped fields (only the anonymization disclaimer excluded) —"
-HITS=$(grep -n -iE "id_tag|idtag|rfid" "${FILES[@]}" 2>/dev/null \
-    | grep -v -iE "dropped at export|customer/RFID|RFID hashes|anonymization|REDACTED-IDTAG|idTag value redacted|idTag=REDACTED|RfidStop|RFIDs, IPs|RFID formats")
-if [ -n "$HITS" ]; then echo "$HITS"; FAIL=1; else echo "none"; fi
+echo "— RFID/idTag-shaped fields (strip known-safe tokens, then retest the remainder —" \
+     "a safe phrase on the line cannot mask a real identifier next to it) —"
+if ! py - "${FILES[@]}" <<'PYEOF'
+import re, sys
+# Known-safe literals are REMOVED from the line, then the detector regex runs
+# on what remains — closes the allowlist semantic escape (security review).
+SAFE = [
+    "idTag=REDACTED RFID", "idTag=REDACTED", "REDACTED-IDTAG", "RfidStop",
+    "embedded RFID idTag value redacted",
+    "customer/RFID/IP", "customer/RFID", "RFID hashes", "RFIDs, IPs",
+    "RFID formats", "idTag value redacted", "dropped at export",
+]
+pattern = re.compile(r"id_tag|idtag|rfid", re.I)
+anonymization_context = re.compile(r"anonymi[sz]", re.I)
+bad = []
+for path in sys.argv[1:]:
+    try:
+        text = open(path, encoding="utf-8", errors="replace").read()
+    except OSError:
+        continue
+    for lineno, line in enumerate(text.splitlines(), 1):
+        if not pattern.search(line):
+            continue
+        stripped = line
+        for token in SAFE:
+            stripped = stripped.replace(token, "")
+        # prose lines about the anonymization policy may name the field class;
+        # only exempt them when no identifier-shaped remainder survives
+        if pattern.search(stripped) and not (
+                anonymization_context.search(line) and "=" not in stripped):
+            bad.append(f"{path}:{lineno}: {line.strip()[:90]}")
+if bad:
+    print("\n".join(bad[:20])); sys.exit(1)
+print("none")
+PYEOF
+then FAIL=1; fi
 
 echo "— precise geo coordinates (>2 decimal places, paired) —"
 HITS=$(grep -n -E "\b[0-9]{1,3}\.[0-9]{3,}, ?-?[0-9]{1,3}\.[0-9]{3,}\b" "${FILES[@]}" 2>/dev/null)
