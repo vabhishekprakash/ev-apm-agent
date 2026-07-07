@@ -28,6 +28,9 @@ sys.path.insert(0, str(ROOT / "detector"))
 from vendor_code_normalizer import normalize  # noqa: E402
 
 STREAMS = [
+    ("real err-sequence export (21,910 rows)", "data/interim/sequences_replay",
+     "REAL sequences: err1024 99/99, UnderVoltage 637, WeakSignal 45; err1051"
+     " machine needs combined status+meter+txn stream (flag 23)"),
     ("real fault-event export (79,681 rows)", "data/interim/fault_replay",
      "REAL events: GroundFailure/WeakSignal/OverVoltage (regenerate adapter from"
      " data/reference/missing_real_faults.csv; see audit flag 22)"),

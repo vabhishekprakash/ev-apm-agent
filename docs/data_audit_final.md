@@ -216,3 +216,19 @@ path) — encoded as a Layer 1 sub-detector.
     in 14 months on one fleet segment = chattering sensor cohort —
     dedup/rate-limiting is a documented future-work item, out of scope
     (Week 3 freeze).
+23. **Real err1051/err1024 status sequences delivered (2026-07-06,
+    data/raw/err1024_err1051_status_sequences.csv, 21,910 rows, 6 connectors,
+    Aug 2025 → Jul 2026 — gitignored: vendor strings carry card-tag/phone identifiers).**
+    Schema finding: real streams put system-err* codes in vendor_error_code
+    with error_code=OtherError — the fixtures had them in error_code; both
+    detectors now match either column (regression-tested). Results:
+    **err1024 real-verified 99/99** (retry bursts real: median 7 s gaps);
+    **err1051: 190 real occurrences — median recovery 10 s, p75 13 s, 80%
+    ≤15 s** — the original 13-second self-recovery story is CONFIRMED for
+    err1051 specifically (flag 12's 42% figure was all fault types mixed;
+    both numbers now correctly attributed). The Charging→Finishing pair
+    structure (89/88 rows) matches the state machine's steps 1/3; the full
+    5-step machine still requires a combined status+meter+transaction window
+    to fire (status-only stream cannot pass the meter-zero gate — 0 alerts,
+    correct behavior). Real-verified detection: 5 of 6 categories + err1051
+    sequence-shape/recovery-stats validation.

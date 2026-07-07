@@ -92,3 +92,4 @@ config.local.yaml
 .claude/
 .obsidian/
 graphify-out/
+.continue/agents

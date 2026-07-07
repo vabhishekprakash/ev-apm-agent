@@ -38,6 +38,13 @@ DEFAULT_SILENCE_THRESHOLD_SECONDS = 90.0
 Event = StatusNotification | MeterValues | StartTransaction | StopTransaction
 
 
+def carries_code(msg: StatusNotification, code: str) -> bool:
+    """True when the status row carries the given system-err code — real
+    streams put it in vendor_error_code with error_code=OtherError, fixtures
+    in error_code (audit flag 23); match either."""
+    return code in (msg.error_code, msg.vendor_error_code)
+
+
 @dataclass
 class FaultAlert:
     """Emitted by any Layer 1 sub-detector when a fault pattern completes."""
@@ -198,12 +205,12 @@ class Err1051Detector:
         self.entered_state_at = at
 
     def _on_status(self, msg: StatusNotification) -> FaultAlert | None:
-        if self.state is Err1051State.IDLE and msg.error_code == ERR_1051:
+        if self.state is Err1051State.IDLE and carries_code(msg, ERR_1051):
             self.first_seen_at = msg.timestamp
             self._transition(Err1051State.ERR_FIRST_SEEN, msg.timestamp)
         elif (
             self.state is Err1051State.METER_ZERO
-            and msg.error_code == ERR_1051
+            and carries_code(msg, ERR_1051)
             and msg.status.value == "Finishing"
         ):
             self._transition(Err1051State.ERR_SECOND_SEEN, msg.timestamp)
@@ -279,7 +286,7 @@ class Err1024Detector:
         return None
 
     def on_status(self, msg: StatusNotification) -> FaultAlert | None:
-        if msg.error_code != ERR_1024:
+        if not carries_code(msg, ERR_1024):
             return None
         return FaultAlert(
             detector=self.DETECTOR_NAME,

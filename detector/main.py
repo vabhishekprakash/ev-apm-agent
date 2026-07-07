@@ -155,6 +155,7 @@ def parse_event(raw: dict):
             connector_pk=raw["connector_pk"],
             status=raw["status"],
             error_code=raw["error_code"],
+            vendor_error_code=raw.get("vendor_error_code") or None,
             timestamp=raw["ts"],
         )
     if kind == "MeterValues":
@@ -303,7 +304,7 @@ def main() -> None:
             # normalizer collapses vendor strings onto the standard buckets.
             canonical = None
             if isinstance(event, StatusNotification) and event.error_code != "NoError":
-                canonical = normalize(raw.get("vendor_error_code"), event.error_code)
+                canonical = normalize(event.vendor_error_code, event.error_code)
             if isinstance(event, StartTransaction):
                 open_sessions[event.transaction_pk] = {
                     "connector_pk": event.connector_pk,

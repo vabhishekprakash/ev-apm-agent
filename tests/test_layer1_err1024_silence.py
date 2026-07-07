@@ -69,6 +69,26 @@ def test_err1024_ignores_other_codes_and_event_types():
     assert det.consume(start(3)) is None
 
 
+def test_err_codes_match_in_vendor_column_real_schema():
+    """Audit flag 23: real streams carry system-err* in vendor_error_code
+    with error_code=OtherError; both detectors must match either column."""
+    from layer1 import ERR_1051, Err1051Detector, Err1051State
+    det1024 = Err1024Detector(CONN)
+    real_row = StatusNotification(connector_pk=CONN, status="Preparing",
+                                  error_code="OtherError",
+                                  vendor_error_code="system-err1024",
+                                  timestamp=at(0))
+    alert = det1024.consume(real_row)
+    assert alert is not None and alert.fault_code == "err1024"
+
+    det1051 = Err1051Detector(CONN)
+    det1051.consume(StatusNotification(connector_pk=CONN, status="Charging",
+                                       error_code="OtherError",
+                                       vendor_error_code=ERR_1051,
+                                       timestamp=at(10)))
+    assert det1051.state is Err1051State.ERR_FIRST_SEEN
+
+
 def test_err1024_fires_on_every_sighting():
     # Confirmed final: the crash-signature reply carries no retry/recovery
     # sequencing, so every sighting fires (prioritizer handles escalation).
