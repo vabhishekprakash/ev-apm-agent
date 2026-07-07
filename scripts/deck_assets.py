@@ -108,7 +108,7 @@ def coverage_chart():
                 volumes[c["category"]] = volumes.get(c["category"], 0) + c["alerts"]
     status = {  # verification provenance (audit flags 18, 22)
         "UnderVoltage": "real events (18/18)", "telemetry-silence": "real + unit tests",
-        "err1051": "fixture + real recovery stats", "err1024": "fixture + crash signature",
+        "err1051": "real seq-shape + recovery stats (80% <=15s)", "err1024": "real events (99/99)",
         "WeakSignal": "real events (150/150)", "GroundFailure": "real events (79,480/79,480)",
         "OverVoltage": "real events (51/51)",
     }

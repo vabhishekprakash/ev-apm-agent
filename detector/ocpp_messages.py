@@ -34,6 +34,10 @@ class StatusNotification(BaseModel):
     # contains vendor strings like "Transaction Stopped" and
     # "Available after Finishing Status", plus system-err1051 / system-err1024.
     error_code: str
+    # Real fleet streams carry the system-err* codes HERE with
+    # error_code=OtherError (fixtures had them in error_code — schema
+    # difference found on the real sequence export, audit flag 23).
+    vendor_error_code: str | None = None
     timestamp: datetime
 
 

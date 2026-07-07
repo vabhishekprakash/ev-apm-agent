@@ -15,6 +15,7 @@
 # - Exclusion filters are line-context-narrow, not file-type-broad.
 cd "$(dirname "$0")/.." || exit 2
 export LC_ALL=C   # grep -P requires a unibyte/UTF-8 locale on Git Bash
+export PYTHONIOENCODING=utf-8  # hit lines may carry non-cp1252 chars
 FAIL=0
 
 mapfile -t FILES < <(git ls-files | grep -v -E '\.(pkl|png|gif|jpg|ico|svg)$' |

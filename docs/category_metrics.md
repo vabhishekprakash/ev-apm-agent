@@ -7,6 +7,15 @@ sequences and the remaining target categories are fixture-verified until
 the full fault-event export lands. Rows are provenance-labeled.
 
 
+## real err-sequence export (21,910 rows)  
+*REAL sequences: err1024 99/99, UnderVoltage 637, WeakSignal 45; err1051 machine needs combined status+meter+txn stream (flag 23)* — 781 alerts
+
+| category | events | alerts | detection | tiers | latency | note |
+|---|---|---|---|---|---|---|
+| UnderVoltage | 637 | 637 | 100% | P1:516, P2:121 | 0s | fires on the event itself |
+| WeakSignal | 45 | 45 | 100% | P1:3, P2:24, P3:18 | 0s | fires on the event itself |
+| err1024 | — | 99 | — | P1:21, P2:78 | 0s | fires on the event itself |
+
 ## real fault-event export (79,681 rows)  
 *REAL events: GroundFailure/WeakSignal/OverVoltage (regenerate adapter from data/reference/missing_real_faults.csv; see audit flag 22)* — 79681 alerts
 
