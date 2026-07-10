@@ -8,13 +8,14 @@ the full fault-event export lands. Rows are provenance-labeled.
 
 
 ## real err-sequence export (21,910 rows)  
-*REAL sequences: err1024 99/99, UnderVoltage 637, WeakSignal 45; err1051 machine needs combined status+meter+txn stream (flag 23)* — 781 alerts
+*REAL sequences: err1024 99/99, UnderVoltage 637, WeakSignal 45; err1051 machine needs combined status+meter+txn stream (flag 23)* — 869 alerts
 
 | category | events | alerts | detection | tiers | latency | note |
 |---|---|---|---|---|---|---|
 | UnderVoltage | 637 | 637 | 100% | P1:516, P2:121 | 0s | fires on the event itself |
 | WeakSignal | 45 | 45 | 100% | P1:3, P2:24, P3:18 | 0s | fires on the event itself |
 | err1024 | — | 99 | — | P1:21, P2:78 | 0s | fires on the event itself |
+| err1051 | — | 88 | — | P2:21, P3:67 | — | stateful: candidate at StopTransaction + final at recovery |
 
 ## real fault-event export (79,681 rows)  
 *REAL events: GroundFailure/WeakSignal/OverVoltage (regenerate adapter from data/reference/missing_real_faults.csv; see audit flag 22)* — 79681 alerts
@@ -22,8 +23,8 @@ the full fault-event export lands. Rows are provenance-labeled.
 | category | events | alerts | detection | tiers | latency | note |
 |---|---|---|---|---|---|---|
 | GroundFailure | 79480 | 79480 | 100% | P1:79480 | 0s | fires on the event itself |
-| OverVoltage | 51 | 51 | 100% | P1:32, P2:19 | 0s | fires on the event itself |
-| WeakSignal | 150 | 150 | 100% | P2:6, P3:144 | 0s | fires on the event itself |
+| OverVoltage | 51 | 51 | 100% | P1:33, P2:18 | 0s | fires on the event itself |
+| WeakSignal | 150 | 150 | 100% | P1:2, P2:8, P3:140 | 0s | fires on the event itself |
 
 ## day5 fixture (err1051/err1024/silence)  
 *synthetic fixture* — 4 alerts
@@ -54,17 +55,3 @@ the full fault-event export lands. Rows are provenance-labeled.
 | telemetry-silence | — | 229 | — | P1:229 | — | absence-of-telemetry signal; fires at threshold by design |
 
 **Categories firing across streams: 7** (err1051, err1024, telemetry-silence, WeakSignal, GroundFailure, Under/OverVoltage counted as their OCPP buckets) of the 19 in the OCPP taxonomy.
-
-## Headline business number — alert-fatigue reduction (hard gate B2)
-
-**80% of real err1051 events (152/190) self-recover within 15 s and are
-auto-downgraded to P3 log entries** (median recovery 10 s — audit flag 23);
-on fixture replay the downgrade is visible as the grey "self-recovered in
-13s" row. Across ALL fault types only ~42% self-clear (n=2,041, flag 12) —
-the downgrade removes exactly the noise without hiding the dispatch-worthy
-majority of other categories.
-
-*Note: the committed `error_taxonomy.csv` collapses to 660 distinct vendor
-strings post-PII-redaction (16k+ card-tag rows collapsed into identical
-redaction tokens); the 17,857 figure is the as-delivered distinct count, measured at
-100% resolution before the scrub (flags 22/24). Both runs gate green.*

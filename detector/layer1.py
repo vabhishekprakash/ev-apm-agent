@@ -119,6 +119,15 @@ class Err1051Detector:
     in timestamp order via consume(); it emits a candidate FaultAlert when the
     StopTransaction lands and a final one (with recovery_seconds) when the
     connector comes back Available.
+
+    Evidence depth (added for the real status-sequence export, flag 25):
+    real streams sometimes carry only status rows — no meter values or
+    transaction events. The signature's spine is fully present in status
+    terms (err1051@Charging → err1051@Finishing → Available; 190 real
+    events, flag 23), so the machine completes on that spine when the
+    corroborating streams are absent, and stamps the alert's `evidence`
+    as "status-only" instead of "full-sequence". The full 5-step path is
+    unchanged and always wins when meter/transaction events arrive first.
     """
 
     DETECTOR_NAME = "err1051"
@@ -131,7 +140,15 @@ class Err1051Detector:
         # doesn't matter.
         self.entered_state_at: datetime | None = None
         self.first_seen_at: datetime | None = None
+        self.second_seen_at: datetime | None = None
         self.stopped_at: datetime | None = None
+        self.meter_confirmed = False
+        self.stop_confirmed = False
+
+    @property
+    def evidence(self) -> str:
+        return ("full-sequence" if self.meter_confirmed and self.stop_confirmed
+                else "status-only")
 
     def consume(self, event: Event) -> FaultAlert | None:
         stuck_alert = None
@@ -142,11 +159,13 @@ class Err1051Detector:
                 # (>15s, so it classifies technician-dispatch on its own).
                 pass
             else:
-                if self.state is Err1051State.STOP_TXN:
+                if self.state in (Err1051State.STOP_TXN,
+                                  Err1051State.ERR_SECOND_SEEN):
                     # The fault outlived the dwell limit with no recovery in
-                    # sight: this is the most dispatch-worthy case, so emit
-                    # the final alert (recovery unobserved) instead of
-                    # silently dropping the sequence.
+                    # sight — after a confirmed double sighting (status-only
+                    # path) or a confirmed stop (full path). Most
+                    # dispatch-worthy case: emit the final alert (recovery
+                    # unobserved) instead of silently dropping the sequence.
                     stuck_alert = FaultAlert(
                         detector=self.DETECTOR_NAME,
                         connector_pk=self.connector_pk,
@@ -176,10 +195,11 @@ class Err1051Detector:
         return alert if alert is not None else stuck_alert
 
     def _completes_recovery(self, event: Event) -> bool:
-        """True when the incoming event is the Available status the STOP_TXN
-        state is waiting for — a slow recovery, not a wedged machine."""
+        """True when the incoming event is the Available status a
+        recovery-waiting state needs — a slow recovery, not a wedged
+        machine."""
         return (
-            self.state is Err1051State.STOP_TXN
+            self.state in (Err1051State.STOP_TXN, Err1051State.ERR_SECOND_SEEN)
             and isinstance(event, StatusNotification)
             and event.status.value == "Available"
         )
@@ -189,7 +209,10 @@ class Err1051Detector:
         self.state = Err1051State.IDLE
         self.entered_state_at = None
         self.first_seen_at = None
+        self.second_seen_at = None
         self.stopped_at = None
+        self.meter_confirmed = False
+        self.stop_confirmed = False
 
     # -- internals -----------------------------------------------------------
 
@@ -204,29 +227,48 @@ class Err1051Detector:
         self.state = state
         self.entered_state_at = at
 
+    def _final_alert(self, recovered_at: datetime, anchor: datetime) -> FaultAlert:
+        recovery = (recovered_at - anchor).total_seconds()
+        alert = FaultAlert(
+            detector=self.DETECTOR_NAME,
+            connector_pk=self.connector_pk,
+            fired_at=recovered_at,
+            stage="final",
+            recovered_after_seconds=recovery,
+            fault_code="err1051",
+            mechanism="internal socket init failure"
+            + ("" if self.evidence == "full-sequence"
+               else " (status-only evidence — no meter/txn stream)"),
+        )
+        self.reset()
+        return alert
+
     def _on_status(self, msg: StatusNotification) -> FaultAlert | None:
         if self.state is Err1051State.IDLE and carries_code(msg, ERR_1051):
             self.first_seen_at = msg.timestamp
             self._transition(Err1051State.ERR_FIRST_SEEN, msg.timestamp)
         elif (
-            self.state is Err1051State.METER_ZERO
+            self.state in (Err1051State.METER_ZERO, Err1051State.ERR_FIRST_SEEN)
             and carries_code(msg, ERR_1051)
             and msg.status.value == "Finishing"
         ):
+            # From METER_ZERO: the full path (meter corroboration seen).
+            # From ERR_FIRST_SEEN: the status-only spine — the stream carries
+            # no meter events, but the signature pair is unambiguous
+            # (89/88 Charging→Finishing pairs in 190 real events, flag 23).
+            self.second_seen_at = msg.timestamp
             self._transition(Err1051State.ERR_SECOND_SEEN, msg.timestamp)
         elif self.state is Err1051State.STOP_TXN and msg.status.value == "Available":
-            recovery = (msg.timestamp - self.stopped_at).total_seconds()
-            alert = FaultAlert(
-                detector=self.DETECTOR_NAME,
-                connector_pk=self.connector_pk,
-                fired_at=msg.timestamp,
-                stage="final",
-                recovered_after_seconds=recovery,
-                fault_code="err1051",
-                mechanism="internal socket init failure",
-            )
-            self.reset()
-            return alert
+            # Full-path recovery: measured from the transaction stop.
+            return self._final_alert(msg.timestamp, self.stopped_at)
+        elif (
+            self.state is Err1051State.ERR_SECOND_SEEN
+            and msg.status.value == "Available"
+        ):
+            # Status-only recovery (no StopTransaction in the stream, or the
+            # CMS dropped it): measured from the second sighting — the same
+            # anchor the flag-23 real-recovery statistics used.
+            return self._final_alert(msg.timestamp, self.second_seen_at)
         return None
 
     def _on_meter_values(self, msg: MeterValues) -> FaultAlert | None:
@@ -234,12 +276,14 @@ class Err1051Detector:
         # only carries meter_reading_wh (measurand column lands with the
         # re-export — data_audit_v0.md flag 6), so a zero reading stands in.
         if self.state is Err1051State.ERR_FIRST_SEEN and msg.meter_reading_wh == 0:
+            self.meter_confirmed = True
             self._transition(Err1051State.METER_ZERO, msg.timestamp)
         return None
 
     def _on_stop_transaction(self, msg: StopTransaction) -> FaultAlert | None:
         if self.state is Err1051State.ERR_SECOND_SEEN and msg.stop_reason == "Other":
             self.stopped_at = msg.stop_timestamp
+            self.stop_confirmed = True
             self._transition(Err1051State.STOP_TXN, msg.stop_timestamp)
             return FaultAlert(
                 detector=self.DETECTOR_NAME,

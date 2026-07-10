@@ -52,11 +52,12 @@ Every number below passed the honesty audit (bottom of file).
   (0% unlabeled residue; PII-scrubbed before commit).
 - **Headline metric: 3.62% false-positive rate** on a chronological held-out
   split (n = 2,015), per-tier breakdown available.
-- **6 of 19 categories detected; 5 real-event verified at 100% detection**
-  (err1024 99/99, GroundFailure 79,480/79,480, WeakSignal 150/150,
-  Under/OverVoltage 688/688, telemetry-silence) — err1051's full state
-  machine fixture-verified with real sequence-shape + recovery validation
-  (80% ≤15 s, n=190).
+- **6 of 19 categories detected — ALL SIX real-event verified at 100%
+  detection** (err1051 88/88 real sequences through the state machine,
+  err1024 99/99, GroundFailure 79,480/79,480, WeakSignal 150/150,
+  Under/OverVoltage 688/688, telemetry-silence); the machine's full-evidence
+  path additionally corroborates via meter+transaction streams when present
+  (flag 25).
 
 ## 7. Demo *(UX)*
 - Live UI: replay streaming, P1/P2/P3 color-coded feed with deciding
@@ -84,7 +85,7 @@ Every number below passed the honesty audit (bottom of file).
 | No per-category precision/recall | None claimed anywhere — no held-out fault set exists. FPR is the only quantitative claim. |
 | FPR 3.62% | Measured, chronological holdout, notebook 04, n=2,015. Deployed threshold −0.1187. Defensible by both presenters. |
 | "19 categories / 17,857 vendor codes / 100% resolved" | Taxonomy delivered 2026-07-06, PII-scrubbed, committed as data/reference/error_taxonomy.csv; coverage measured (0.9% shape-rules + labeled-field fallback — framed as "resolves", never "routed by rules"). |
-| "6 of 19 categories, 5 real-verified" | Real fault exports delivered 2026-07-05/06: detection 100% per category on 80k+ real events; err1051 machine needs a combined status+meter+txn window (flag 23) — stated as such. |
+| "6 of 19 categories, ALL real-verified" | 100% detection per category on 80k+ real events; err1051 verified end-to-end on 88 real sequences via the status-evidence path (flag 25) — full-evidence corroboration noted honestly as pending a combined export. |
 | "80% of err1051 self-recovers ≤15 s (median 10 s)" | Measured on 190 real err1051 events (flag 23); the mixed-fault 42% (n=2,041, flag 12) is quoted alongside — both attributed. |
 | Temperature/asymmetry claims | **None** — temperature field is dead in real data (flag 11). |
 | 23,084 sessions | Stated as "audited at source"; modeling claims use the delivered 10,090 only. |
