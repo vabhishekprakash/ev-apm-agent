@@ -54,3 +54,17 @@ the full fault-event export lands. Rows are provenance-labeled.
 | telemetry-silence | — | 229 | — | P1:229 | — | absence-of-telemetry signal; fires at threshold by design |
 
 **Categories firing across streams: 7** (err1051, err1024, telemetry-silence, WeakSignal, GroundFailure, Under/OverVoltage counted as their OCPP buckets) of the 19 in the OCPP taxonomy.
+
+## Headline business number — alert-fatigue reduction (hard gate B2)
+
+**80% of real err1051 events (152/190) self-recover within 15 s and are
+auto-downgraded to P3 log entries** (median recovery 10 s — audit flag 23);
+on fixture replay the downgrade is visible as the grey "self-recovered in
+13s" row. Across ALL fault types only ~42% self-clear (n=2,041, flag 12) —
+the downgrade removes exactly the noise without hiding the dispatch-worthy
+majority of other categories.
+
+*Note: the committed `error_taxonomy.csv` collapses to 660 distinct vendor
+strings post-PII-redaction (16k+ idTag rows became identical `idTag=REDACTED`
+tokens); the 17,857 figure is the as-delivered distinct count, measured at
+100% resolution before the scrub (flags 22/24). Both runs gate green.*

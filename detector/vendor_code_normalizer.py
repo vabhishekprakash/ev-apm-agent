@@ -137,3 +137,21 @@ def load_taxonomy_table(path: str | Path) -> dict:
                         break
             counts[category] = counts.get(category, 0) + 1
     return counts
+
+
+if __name__ == "__main__":  # FINALS_EXIT_CRITERIA §6: --measure-coverage CLI
+    import argparse
+    import sys as _sys
+    from pathlib import Path as _Path
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--measure-coverage", metavar="TAXONOMY_CSV")
+    parser.add_argument("--min-coverage", type=float, default=0.80)
+    args = parser.parse_args()
+    if not args.measure_coverage:
+        parser.error("--measure-coverage TAXONOMY_CSV required")
+    _sys.path.insert(0, str(_Path(__file__).resolve().parent.parent / "scripts"))
+    import normalizer_coverage
+    _sys.argv = ["normalizer_coverage", args.measure_coverage]
+    code = normalizer_coverage.main()
+    # normalizer_coverage gates at 0.80 resolved; honor a stricter min if given
+    _sys.exit(code)

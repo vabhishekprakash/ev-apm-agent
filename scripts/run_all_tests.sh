@@ -19,8 +19,8 @@ REPLAY_SPEED_MULTIPLIER=0 $PY replay/main.py 2>/dev/null \
     | (cd detector && LAYER2_THRESHOLD=-0.1187 $PY main.py) 2>&1 >/dev/null \
     | grep -E "flag rate|summary" || FAIL=1
 
-echo "=== 4. vendor-code coverage (Suite D1 — needs error_taxonomy.csv) ==="
-$PY scripts/normalizer_coverage.py || echo "(blocked: taxonomy not delivered)"
+echo "=== 4. vendor-code coverage (gate I2: >=80% resolved) ==="
+$PY scripts/normalizer_coverage.py || FAIL=1
 
 echo "=== 5. FPR (Suite C1) ==="
 echo "chronological holdout: 3.62% overall at -0.1187 (notebook 04, n=2015)"
