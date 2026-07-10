@@ -103,9 +103,10 @@ Real fault data arrived late and in pieces, each analyzed and documented:
 - `err1024_crash_signature.csv` — the err1024 mechanism, 3 real events
   (flag 21).
 
-**Honest data limitations.** The temperature field is dead at source (0.0
-across three independent exports — flag 20), so temperature features are out
-of scope. The err1051 full 5-step machine requires a combined
+**Honest data limitations.** Temperature was absent (all-zero) in every
+fault-window export (flags 11/20); a late wide-matrix export proved real
+values exist at source (28–66 °C, n=79 — flag 26), but without sensor
+locations or scale, so temperature features remain out of scope. The err1051 full 5-step machine requires a combined
 status + meter + transaction window that no export delivered, so it is
 fixture-verified with real sequence-shape and recovery statistics rather than
 end-to-end on live events (flag 23).
