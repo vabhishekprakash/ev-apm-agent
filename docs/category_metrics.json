@@ -2,7 +2,7 @@
   {
     "stream": "real err-sequence export (21,910 rows)",
     "provenance": "REAL sequences: err1024 99/99, UnderVoltage 637, WeakSignal 45; err1051 machine needs combined status+meter+txn stream (flag 23)",
-    "total_alerts": 781,
+    "total_alerts": 869,
     "categories": [
       {
         "category": "UnderVoltage",
@@ -40,6 +40,18 @@
         },
         "time_to_alert_s": 0,
         "note": "fires on the event itself"
+      },
+      {
+        "category": "err1051",
+        "events_observed": null,
+        "alerts": 88,
+        "detection_rate": null,
+        "priority_distribution": {
+          "P3": 67,
+          "P2": 21
+        },
+        "time_to_alert_s": null,
+        "note": "stateful: candidate at StopTransaction + final at recovery"
       }
     ]
   },
@@ -65,8 +77,8 @@
         "alerts": 51,
         "detection_rate": 1.0,
         "priority_distribution": {
-          "P2": 19,
-          "P1": 32
+          "P2": 18,
+          "P1": 33
         },
         "time_to_alert_s": 0,
         "note": "fires on the event itself"
@@ -77,8 +89,9 @@
         "alerts": 150,
         "detection_rate": 1.0,
         "priority_distribution": {
-          "P3": 144,
-          "P2": 6
+          "P3": 140,
+          "P2": 8,
+          "P1": 2
         },
         "time_to_alert_s": 0,
         "note": "fires on the event itself"

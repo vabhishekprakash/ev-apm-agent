@@ -243,3 +243,18 @@ path) — encoded as a Layer 1 sub-detector.
     shipped per docs/layer_1_plan.md + docs/week_3_recommended_plan.md
     (scope-freeze lifted by owner for these items; Layer-1 P2/SKIP
     categories remain out per the ROI matrix).
+25. **err1051 real-verified end-to-end (2026-07-10).** Requirement direction:
+    verify the full sequence against the real status-sequence export
+    (flag 23). The machine gained a status-only evidence path — real streams
+    carry the signature's spine (err1051@Charging → err1051@Finishing →
+    Available) without meter/transaction corroboration, so the machine
+    completes on the spine and stamps the alert mechanism "status-only
+    evidence"; the full 5-step path is unchanged and wins whenever meter/txn
+    events arrive first, and dwell-timeout dispatch alerts now cover the
+    double-sighted-unrecovered case too. Result on the real export: **88
+    final alerts = 88/88 real Charging→Finishing pairs, recovery median 6 s
+    (anchor: second sighting), 100% ≤15 s** (67 P3-transient, 21 upgraded P2
+    by real repeat clustering; zero candidates — correct, no stop events).
+    **All 6 Layer-1 categories are now real-event verified**; the T1
+    criteria erratum retires. Full-evidence (meter+txn) corroboration on
+    real data still awaits a combined export — tracked in future_work.

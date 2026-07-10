@@ -142,6 +142,63 @@ def test_non_stop_txn_stuck_reset_still_emits_no_alert():
     assert det.state is Err1051State.IDLE
 
 
+def test_status_only_spine_completes_with_degraded_evidence():
+    """Flag 25: real streams may carry only status rows. The machine
+    completes on err1051@Charging -> err1051@Finishing -> Available and
+    says so in the mechanism; recovery anchors on the second sighting
+    (the flag-23 measurement anchor)."""
+    det = Err1051Detector(CONN)
+    alerts = run_sequence(det, [
+        status(0, "Charging", ERR_1051),
+        status(7, "Finishing", ERR_1051),   # no meter event in between
+        status(17, "Available", "NoError"),  # 10s after second sighting
+    ])
+    assert len(alerts) == 1                  # no candidate without a stop event
+    final = alerts[0]
+    assert final.stage == "final"
+    assert final.recovered_after_seconds == 10.0
+    assert final.classification == "transient"
+    assert "status-only" in final.mechanism
+    assert det.state is Err1051State.IDLE
+
+
+def test_full_sequence_keeps_full_evidence_mechanism():
+    det = Err1051Detector(CONN)
+    alerts = run_sequence(det, [
+        status(0, "Charging", ERR_1051),
+        meter(2, 0),
+        status(4, "Finishing", ERR_1051),
+        stop(5, "Other"),
+        status(18, "Available", "NoError"),
+    ])
+    assert [a.stage for a in alerts] == ["candidate", "final"]
+    assert "status-only" not in alerts[1].mechanism
+
+
+def test_status_only_slow_recovery_past_dwell_still_finalizes():
+    det = Err1051Detector(CONN)
+    alerts = run_sequence(det, [
+        status(0, "Charging", ERR_1051),
+        status(7, "Finishing", ERR_1051),
+        status(80, "Available", "NoError"),  # 73s later, past 60s dwell
+    ])
+    assert alerts[-1].recovered_after_seconds == 73.0
+    assert alerts[-1].classification == "technician-dispatch"
+
+
+def test_status_only_unrecovered_times_out_with_dispatch_alert():
+    det = Err1051Detector(CONN)
+    run_sequence(det, [
+        status(0, "Charging", ERR_1051),
+        status(7, "Finishing", ERR_1051),
+    ])
+    assert det.state is Err1051State.ERR_SECOND_SEEN
+    alert = det.consume(status(90, "Charging", "NoError"))
+    assert alert is not None and alert.stage == "final"
+    assert alert.recovered_after_seconds is None
+    assert alert.classification == "technician-dispatch"
+
+
 def test_normal_traffic_stays_idle():
     det = Err1051Detector(CONN)
     alerts = run_sequence(det, [

@@ -9,9 +9,10 @@ in this file, not in code.
   events in 14 months on one fleet segment (chattering sensor cohort, flag
   22); production needs episode-collapse before alerting. The prioritizer's
   file-top constants are the tuning surface.
-- **err1051 full-machine real verification** — needs one combined
-  status + meter_values + transaction export window (the status-only
-  sequence export validates shape + recovery stats only, flag 23).
+- **err1051 full-evidence corroboration** — the machine is real-verified
+  end-to-end on the status spine (88/88, flag 25); the meter+transaction
+  corroborating steps still await one combined export window to be
+  exercised on real data.
 - **err1024 meter-signature gate** — the crash signature (current/power ≈ 0,
   supply nominal) can suppress false positives once measurand telemetry
   streams live (flag 21).

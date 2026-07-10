@@ -75,7 +75,7 @@ at the bottom). Numbers match `docs/deck_outline.md` exactly.
 | Anomaly score + flagged dots | drift panel SVG | ✅ live |
 | FPR 3.6% | narration; summary header shows live flag rate | ✅ (header shows replay flag rate — say "held-out" out loud, don't point) |
 | 39/80/12/19 fleet numbers | narration only | ✅ audited |
-| 6 fault categories | **NOT claimable yet** — feed shows 3 categories today | ⚠️ cut from v1 narration; add after Day 4–5 verification |
+| 6 fault categories | coverage chips + feed (all six fire; 6/6 real-event verified, flag 25) | ✅ claimable |
 | Temperature asymmetry | — | ❌ cut (dead field, flag 11) |
 
 ## Task 3 — strongest 20-second clip (hook)
