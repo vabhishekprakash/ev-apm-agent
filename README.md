@@ -42,6 +42,7 @@ We'll prove it on real data from 39 stations across 5+ vendors, deployed as a dr
 
 | You want… | Path |
 |-----------|------|
+| **New here? Plain-language guide** (what/why/how, no jargon) | [`docs/GUIDE_FOR_HUMANS.md`](docs/GUIDE_FOR_HUMANS.md) |
 | **The full write-up** (problem, methods, results, deployment) | [`docs/detailed_document.md`](docs/detailed_document.md) |
 | **How to run and manually test it** (step-by-step) | [`docs/RUNBOOK.md`](docs/RUNBOOK.md) |
 | Architecture diagram | [`docs/architecture_v2.svg`](docs/architecture_v2.svg) ([source](docs/architecture_v2.mmd)) |
