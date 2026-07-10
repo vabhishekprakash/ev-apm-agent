@@ -125,6 +125,51 @@ sparse; it fills densely when driven by real session history.)
 
 ---
 
+## 3½. Bring your own data (which files, which columns, where)
+
+The pipeline ingests **CSV exports**, not live OCPP traffic. Point `DATA_DIR`
+at any folder containing some or all of these files — each is optional; the
+replay merges whatever exists into one time-ordered stream:
+
+| File | Columns (header row required) | Drives |
+|---|---|---|
+| `status_notification.csv` | `connector_pk,status,error_code[,vendor_error_code],timestamp` | all Layer 1 fault detectors |
+| `meter_values.csv` | `transaction_pk,connector_pk,meter_reading_wh,timestamp` | err1051 meter gate; telemetry-silence re-arm |
+| `transaction.csv` | `transaction_pk,connector_pk,start_timestamp,stop_timestamp,stop_reason` | session tracking; Layer 2 scoring on close |
+| `heartbeat.csv` | `log_sequence_id,hashed_charge_box_id,timestamp` | advances the silence clock only |
+| `boot_notification.csv` | `log_sequence_id,hashed_charge_box_id,timestamp,registration_status` | ignored by detectors (clock only) |
+
+Rules of the contract:
+- **Timestamps**: `YYYY-MM-DD HH:MM:SS[.ffffff]` (quoted or not). Events are
+  replayed in global timestamp order.
+- **`status`** must be an OCPP 1.6 ChargePointStatus (`Available`,
+  `Preparing`, `Charging`, `SuspendedEV`, `SuspendedEVSE`, `Finishing`,
+  `Reserved`, `Unavailable`, `Faulted`) or the observed extras
+  (`RemoteStartRequested`, `RemoteStopRequested`). Unknown statuses are
+  counted as parse errors and skipped — the stream keeps flowing.
+- **`error_code`** is the OCPP category; vendor-specific codes (incl.
+  `system-err*`) may ride in `vendor_error_code` — detectors match either.
+- **Station enrichment** is optional: rows in
+  `data/reference/charger_stations.csv` / `fault_segment_stations.csv`
+  (`connector_pk,hashed_charge_box_id,physical_plug_id`, hash = 64-char
+  SHA-256) light up the station column, station-wide escalation, and
+  per-connector Layer 2 models. Unknown `connector_pk`s still alert — they
+  fall back to the global pooled model and show pk-only.
+- **Where to put files**: anywhere; pass the folder as `DATA_DIR`
+  (`data/raw/` is the conventional, gitignored spot). **Never commit raw
+  operator data** — run `bash tests/anonymization_audit.sh` before any
+  commit that touches `data/` or docs.
+
+Smoke-check your own export end-to-end:
+
+```bash
+DATA_DIR=path/to/your/export REPLAY_SPEED_MULTIPLIER=0   python replay/main.py | python detector/main.py
+# stderr shows: events / routed / parse_errors / alerts — parse_errors > 0
+# means a column or status value doesn't match the contract above
+```
+
+---
+
 ## 4. Verify correctness (automated)
 
 ```bash
