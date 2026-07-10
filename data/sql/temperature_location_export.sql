@@ -33,4 +33,4 @@ ORDER BY connector_pk, timestamp;
 --
 -- Delivery hygiene (every past failure encoded here): NO row caps; UTF-8;
 -- full-precision 'YYYY-MM-DD HH:MM:SS.ffffff' timestamps; numeric-only
--- values (no embedded idTag/phone strings); complete final line.
+-- values (no embedded card-tag/phone strings); complete final line.
