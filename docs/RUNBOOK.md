@@ -105,7 +105,7 @@ docker compose down -v
 MSYS_NO_PATHCONV=1 DATA_DIR=/app/tests/fixtures/day5_replay \
   REPLAY_SPEED_MULTIPLIER=0 docker compose up -d --build
 ```
-In the UI feed, verify the **deciding-signal** column:
+In the UI feed ("Maintenance Decision Support"), verify the **deciding-signal**, **impact**, and **recommended action** columns:
 - an **err1051** row is **grey P3** with *"self-recovered in 13s"* — the
   transient that gets auto-suppressed;
 - a **telemetry_silence** row is **red P1** with *"active session dark for …s"*.

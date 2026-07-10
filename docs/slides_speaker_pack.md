@@ -1,4 +1,6 @@
-# Slide source pack — build-ready (Week 3 Days 2–4)
+# Slide source pack — build-ready
+
+**Tagline (locked): "AI Maintenance Decision Support for EV Charging Infrastructure".** Surface vocabulary: "Maintenance Recommendation" (not "alert"), "Maintenance Priority" (not "priority tier") — every recommendation carries confidence, likely root cause, recommended action, and impact class.
 
 Transcribe into Google Slides; every number is locked against
 `docs/data_audit_final.md` (single source of truth). Asset paths are

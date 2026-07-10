@@ -36,6 +36,7 @@ from layer1 import (
     make_category_detectors,
 )
 from layer2 import Layer2Anomaly
+from decision_support import enrich as decision_enrich
 from prioritizer import AlertPrioritizer
 from vendor_code_normalizer import normalize
 
@@ -86,8 +87,10 @@ def post_json(url: str, payload: dict) -> bool:
 
 
 def load_connector_inventory() -> dict[int, dict]:
-    """connector_pk -> station identity, for alert enrichment. Empty if the
-    reference export isn't mounted (alerts then carry connector_pk only)."""
+    """connector_pk -> station identity, for alert enrichment. Merges the
+    core inventory with the fault-segment mapping (113 connectors whose
+    station names arrived late and ship hashed — audit flag 24). Empty if no
+    reference export is mounted (alerts then carry connector_pk only)."""
     candidates = [
         Path(os.environ["REFERENCE_DIR"]) if "REFERENCE_DIR" in os.environ else None,
         Path("data/reference"),
@@ -96,14 +99,18 @@ def load_connector_inventory() -> dict[int, dict]:
     for ref_dir in candidates:
         if ref_dir is None or not (ref_dir / "charger_stations.csv").exists():
             continue
-        with (ref_dir / "charger_stations.csv").open(newline="", encoding="utf-8-sig") as f:
-            return {
-                int(row["connector_pk"]): {
-                    "hashed_charge_box_id": row["hashed_charge_box_id"],
-                    "physical_plug_id": int(row["physical_plug_id"]),
-                }
-                for row in csv.DictReader(f)
-            }
+        inventory: dict[int, dict] = {}
+        for name in ("charger_stations.csv", "fault_segment_stations.csv"):
+            path = ref_dir / name
+            if not path.exists():
+                continue
+            with path.open(newline="", encoding="utf-8-sig") as f:
+                for row in csv.DictReader(f):
+                    inventory[int(row["connector_pk"])] = {
+                        "hashed_charge_box_id": row["hashed_charge_box_id"],
+                        "physical_plug_id": int(row["physical_plug_id"]),
+                    }
+        return inventory
     print("warning: charger_stations.csv not found, alerts unenriched", file=sys.stderr)
     return {}
 
@@ -202,7 +209,7 @@ def emit(alert, counts: dict) -> None:
     counts["alerts"] += 1
     payload = alert if isinstance(alert, dict) else alert.to_dict()
     payload.update(CONNECTOR_INVENTORY.get(payload.get("connector_pk"), {}))
-    sink_alert(PRIORITIZER.prioritize(payload))
+    sink_alert(decision_enrich(PRIORITIZER.prioritize(payload)))
     # Alerts are rare; refreshing counters on each keeps the UI header live
     # even on short demo streams (the compose tail never EOFs, so the
     # end-of-stream report never fires there).

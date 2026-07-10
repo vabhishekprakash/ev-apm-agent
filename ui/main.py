@@ -25,7 +25,7 @@ from fastapi.responses import HTMLResponse
 BUFFER_SIZE = int(os.environ.get("ALERT_BUFFER_SIZE", "500"))
 SESSION_BUFFER_SIZE = int(os.environ.get("SESSION_BUFFER_SIZE", "2000"))
 
-app = FastAPI(title="EV APM UI Service")
+app = FastAPI(title="EV APM — Maintenance Decision Support")
 alerts: deque = deque(maxlen=BUFFER_SIZE)
 sessions: dict[int, deque] = defaultdict(lambda: deque(maxlen=SESSION_BUFFER_SIZE))
 stats: dict = {}
@@ -95,7 +95,7 @@ PAGE = """<!doctype html>
 <html>
 <head>
 <meta charset="utf-8">
-<title>EV APM — fault operations</title>
+<title>EV APM — Maintenance Decision Support</title>
 <style>
   body { font-family: system-ui, sans-serif; margin: 1.2rem; background: #101418; color: #e8eaed; }
   h1 { font-size: 1.15rem; margin: 0 0 .3rem; } h1 small { color: #7a869a; font-weight: normal; }
@@ -110,6 +110,14 @@ PAGE = """<!doctype html>
   .chip b { color: #e8eaed; }
   .chip.p1 { border-color: #5c1a1a; } .chip.p2 { border-color: #52400f; }
   #coverage .headline { color: #7a869a; font-size: .78rem; align-self: center; }
+  #health { display: flex; gap: .45rem; flex-wrap: wrap; margin: 0 0 .6rem; }
+  .health-chip { border-radius: 10px; padding: .18rem .6rem; font-size: .74rem;
+                 background: #1a2027; border: 1px solid #2a323d; color: #b7c0cc; }
+  .health-chip b { color: #e8eaed; }
+  .health-chip.faulted { border-color: #5c1a1a; } .health-chip.faulted i { color: #ff6b6b; }
+  .health-chip.atrisk { border-color: #52400f; } .health-chip.atrisk i { color: #fdcb6e; }
+  .health-chip.degrading i { color: #74b9ff; } .health-chip.healthy i { color: #2ecc71; }
+  .health-chip i { font-style: normal; font-weight: 700; }
   .chip { cursor: pointer; }
   .chip.active { background: #2b6cb0; color: #fff; }
   .chip.active b { color: #fff; }
@@ -132,19 +140,23 @@ PAGE = """<!doctype html>
 </style>
 </head>
 <body>
-<h1>EV APM — fault operations <small>polling every 2s</small>
-  <button id="sort-toggle" title="toggle feed order">sort: tier</button>
+<h1>EV APM — Maintenance Decision Support <small>AI maintenance recommendations for EV charging infrastructure · polling every 2s</small>
+  <button id="sort-toggle" title="toggle feed order">sort: priority</button>
 </h1>
 <div id="counters"></div>
 <div id="coverage"></div>
 
 <table>
   <thead><tr>
-    <th>tier</th><th>fired at</th><th>station</th><th>connector</th>
-    <th>category</th><th>classification</th><th>deciding signal</th>
+    <th>maintenance priority</th><th>fired at</th><th>station</th><th>connector</th>
+    <th>category</th><th>impact</th><th>recommended action</th><th>deciding signal</th>
   </tr></thead>
   <tbody id="rows"></tbody>
 </table>
+
+<h2>Connector health <small>rule table: unresolved P1 in buffer → Faulted ·
+P2 or ≥3 drift flags → At-risk · any drift flag → Degrading · else Healthy</small></h2>
+<div id="health"></div>
 
 <h2>Per-connector drift <small id="drift-note"></small></h2>
 <select id="connector-picker"><option value="">— select connector —</option></select>
@@ -164,7 +176,7 @@ let categoryFilter = null;   // category string or null = all
 
 document.getElementById('sort-toggle').addEventListener('click', () => {
   sortMode = sortMode === 'tier' ? 'newest' : 'tier';
-  document.getElementById('sort-toggle').textContent = 'sort: ' + sortMode;
+  document.getElementById('sort-toggle').textContent = 'sort: ' + (sortMode === 'tier' ? 'priority' : 'newest');
   poll();
 });
 
@@ -204,14 +216,17 @@ async function poll() {
       tr.append(badge, el('td', null, a.fired_at),
         el('td', 'mono', a.hashed_charge_box_id ? a.hashed_charge_box_id.slice(0, 10) + '…' : '—'),
         el('td', null, a.physical_plug_id != null ? `plug ${a.physical_plug_id} (pk ${a.connector_pk})` : a.connector_pk),
-        el('td', null, category(a)), el('td', null, a.classification || '—'),
+        el('td', null, category(a)),
+        el('td', (a.impact_class || '').startsWith('Safety') ? 'technician-dispatch' :
+                 (a.impact_class || '').startsWith('Revenue') ? 'investigate' : '', a.impact_class || '—'),
+        el('td', null, a.recommended_action || '—'),
         el('td', 'signal', a.deciding_signal || '—'));
       rows.append(tr);
     }
 
     const p1 = all.filter(a => a.priority_tier === 'P1').length;
     const p2 = all.filter(a => a.priority_tier === 'P2').length;
-    const categories = new Set(all.map(category));
+    const categories = new Set(all.filter(a => a.detector_source !== 'layer2_drift').map(category));
 
     // category-coverage panel: one chip per category with count + worst tier
     const rollup = new Map();
@@ -246,15 +261,51 @@ async function poll() {
       counter('active P2', p2, 'p2'),
       counter('sessions processed', stats.sessions_closed ?? '—'),
       counter('layer-2 flag rate', flagRate),
-      counter('categories detected', categories.size + ' / 6'),
+      counter('categories detected', categories.size + ' / 19'),
       counter('events', stats.events ?? '—'),
     );
   } catch (err) { /* keep last render on transient poll failure */ }
 }
 
+function healthState(c, alertsByConn) {
+  const a = alertsByConn.get(c.connector_pk) || {p1: 0, p2: 0, drift: 0};
+  if (a.p1 > 0) return ['Faulted', 'faulted'];
+  if (a.p2 > 0 || c.flagged >= 3) return ['At-risk', 'atrisk'];
+  if (a.drift > 0 || c.flagged > 0) return ['Degrading', 'degrading'];
+  return ['Healthy', 'healthy'];
+}
+
 async function refreshConnectors() {
   const res = await fetch('/connectors');
   const list = await res.json();
+  const alerts = await (await fetch('/alerts?limit=200')).json();
+  const byConn = new Map();
+  for (const a of alerts) {
+    const e = byConn.get(a.connector_pk) || {p1: 0, p2: 0, drift: 0};
+    if (a.priority_tier === 'P1') e.p1++;
+    if (a.priority_tier === 'P2') e.p2++;
+    if (a.detector_source === 'layer2_drift') e.drift++;
+    byConn.set(a.connector_pk, e);
+  }
+  // union: session-bearing connectors + alert-only connectors (the fault
+  // segment has recommendations but no session history — it must still
+  // appear in the health rollup)
+  const known = new Map(list.map(c => [c.connector_pk, c]));
+  for (const pk of byConn.keys())
+    if (!known.has(pk)) known.set(pk, {connector_pk: pk, sessions: 0, flagged: 0});
+  const rollup2 = [...known.values()].map(c => [c, healthState(c, byConn)]);
+  const rank = {faulted: 0, atrisk: 1, degrading: 2, healthy: 3};
+  rollup2.sort((x, y) => rank[x[1][1]] - rank[y[1][1]] || x[0].connector_pk - y[0].connector_pk);
+  const health = document.getElementById('health');
+  health.replaceChildren();
+  for (const [c, [label, cls]] of rollup2.slice(0, 40)) {
+    const chip = el('span', 'health-chip ' + cls);
+    chip.append(el('b', null, `${c.connector_pk}`), document.createTextNode(' '));
+    chip.append(Object.assign(document.createElement('i'), {textContent: label}));
+    health.append(chip);
+  }
+  if (rollup2.length > 40)
+    health.append(el('span', 'headline', `+${rollup2.length - 40} more (worst first)`));
   const picker = document.getElementById('connector-picker');
   const current = picker.value;
   picker.replaceChildren(new Option('— select connector —', ''));

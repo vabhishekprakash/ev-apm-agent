@@ -1,4 +1,6 @@
-# Deck outline v1 — 9 slides (Week 2 Day 3)
+# Deck outline — 9 slides
+
+**System tagline (locked):** "AI Maintenance Decision Support for EV Charging Infrastructure" — alerts surface as **Maintenance Recommendations** with a **Maintenance Priority** (P1/P2/P3), confidence, likely root cause, recommended action, and impact class.
 
 Mapped to judging criteria: Innovation 25% / Business Impact 25% /
 Technical Excellence 20% / Scalability 15% / UX 15%.

@@ -20,8 +20,11 @@ OCPP-compliant charging-management system (CMS) streams status
 notifications, meter values, and session lifecycle events. Nobody is reading
 it for fault signatures.
 
-**What we built** is an asset-performance agent that watches the CMS event
-stream and turns raw telemetry into prioritized, explainable fault alerts. It
+**What we built** is **AI Maintenance Decision Support for EV charging
+infrastructure**: an agent that watches the CMS event stream and turns raw
+telemetry into prioritized, explainable maintenance recommendations — each
+carrying a maintenance priority, confidence, likely root cause, recommended
+action, and impact class. It
 tracks charger *behavior* over time — a behavior proxy, explicitly **not**
 battery state-of-health or state-of-charge diagnostics. It runs beside any
 OCPP-compliant CMS: replaying historical exports today, consuming a live

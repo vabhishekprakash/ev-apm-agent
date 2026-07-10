@@ -232,3 +232,14 @@ path) — encoded as a Layer 1 sub-detector.
     to fire (status-only stream cannot pass the meter-zero gate — 0 alerts,
     correct behavior). Real-verified detection: 5 of 6 categories + err1051
     sequence-shape/recovery-stats validation.
+24. **Fault-segment station mapping delivered (2026-07-08):** the enriched
+    fault export carried RAW station names (87 stations) for the
+    113-connector segment — committed as
+    `data/reference/fault_segment_stations.csv` with names SHA-256-hashed
+    per the anonymization protocol (raw-named file quarantined to
+    data/raw, gitignored). Alert enrichment now covers the fault segment.
+    Decision-support fields (confidence / likely_root_cause /
+    recommended_action / impact_class) and the connector-health rollup
+    shipped per docs/layer_1_plan.md + docs/week_3_recommended_plan.md
+    (scope-freeze lifted by owner for these items; Layer-1 P2/SKIP
+    categories remain out per the ROI matrix).
