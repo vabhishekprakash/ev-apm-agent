@@ -1,4 +1,4 @@
-﻿# Branch Strategy
+# Branch Strategy
 
 ## Rules
 
