@@ -97,76 +97,207 @@ PAGE = """<!doctype html>
 <meta charset="utf-8">
 <title>EV APM — Maintenance Decision Support</title>
 <style>
-  body { font-family: system-ui, sans-serif; margin: 1.2rem; background: #101418; color: #e8eaed; }
-  h1 { font-size: 1.15rem; margin: 0 0 .3rem; } h1 small { color: #7a869a; font-weight: normal; }
-  #counters { display: flex; gap: .8rem; margin: .8rem 0 1rem; flex-wrap: wrap; }
-  .counter { background: #1a2027; border-radius: 8px; padding: .5rem .9rem; min-width: 7.5rem; }
-  .counter b { display: block; font-size: 1.3rem; }
-  .counter span { color: #7a869a; font-size: .72rem; text-transform: uppercase; letter-spacing: .04em; }
-  .counter.p1 b { color: #ff6b6b; } .counter.p2 b { color: #fdcb6e; }
-  #coverage { display: flex; gap: .45rem; flex-wrap: wrap; margin: 0 0 1rem; }
-  .chip { background: #1a2027; border: 1px solid #2a323d; border-radius: 12px;
-          padding: .15rem .6rem; font-size: .74rem; color: #b7c0cc; }
-  .chip b { color: #e8eaed; }
-  .chip.p1 { border-color: #5c1a1a; } .chip.p2 { border-color: #52400f; }
-  #coverage .headline { color: #7a869a; font-size: .78rem; align-self: center; }
-  #health { display: flex; gap: .45rem; flex-wrap: wrap; margin: 0 0 .6rem; }
-  .health-chip { border-radius: 10px; padding: .18rem .6rem; font-size: .74rem;
-                 background: #1a2027; border: 1px solid #2a323d; color: #b7c0cc; }
-  .health-chip b { color: #e8eaed; }
-  .health-chip.faulted { border-color: #5c1a1a; } .health-chip.faulted i { color: #ff6b6b; }
-  .health-chip.atrisk { border-color: #52400f; } .health-chip.atrisk i { color: #fdcb6e; }
-  .health-chip.degrading i { color: #74b9ff; } .health-chip.healthy i { color: #2ecc71; }
-  .health-chip i { font-style: normal; font-weight: 700; }
-  .chip { cursor: pointer; }
-  .chip.active { background: #2b6cb0; color: #fff; }
+  :root {
+    --bg: #070b12; --panel: #0d1420; --panel-2: #101a2b; --line: #1b2740;
+    --text: #dce5f2; --muted: #6b7a93; --faint: #46536b;
+    --accent: #22d3ee; --p1: #f87171; --p2: #fbbf24; --p3: #8d9aae;
+    --ok: #34d399; --drift: #60a5fa;
+  }
+  * { box-sizing: border-box; }
+  body { font-family: "Segoe UI Variable Text", "Inter", system-ui, sans-serif;
+         margin: 0; background: var(--bg); color: var(--text);
+         background-image: radial-gradient(1200px 400px at 70% -10%, #0e1a2e 0%, transparent 60%); }
+  b, .num { font-variant-numeric: tabular-nums; }
+
+  /* ── top bar ─────────────────────────────────────────── */
+  #topbar { display: flex; align-items: center; gap: .9rem; padding: .65rem 1.2rem;
+            border-bottom: 1px solid var(--line); position: sticky; top: 0; z-index: 5;
+            background: rgba(7,11,18,.92); backdrop-filter: blur(6px); }
+  #brand { display: flex; align-items: baseline; gap: .55rem; }
+  #brand b { font-size: 1.02rem; letter-spacing: .02em; }
+  #brand b em { font-style: normal; color: var(--accent); }
+  #brand small { color: var(--muted); font-size: .74rem; }
+  #topbar .spacer { flex: 1; }
+  #conn-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--faint);
+              box-shadow: 0 0 6px var(--faint); }
+  #conn-dot.live { background: var(--ok); box-shadow: 0 0 8px var(--ok); }
+  #conn-dot.down { background: var(--p1); box-shadow: 0 0 8px var(--p1); }
+  #conn-label, #clock { color: var(--muted); font-size: .72rem;
+                        font-family: ui-monospace, monospace; }
+  #sort-toggle { background: var(--panel-2); color: var(--text); border: 1px solid var(--line);
+                 border-radius: 6px; padding: .28rem .7rem; cursor: pointer; font-size: .74rem; }
+  #sort-toggle:hover { border-color: var(--accent); }
+
+  main { padding: 1rem 1.2rem 2rem; max-width: 1620px; margin: 0 auto; }
+
+  /* ── KPI band ────────────────────────────────────────── */
+  #counters { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+              gap: .7rem; margin: .2rem 0 .9rem; }
+  .counter { background: linear-gradient(180deg, var(--panel-2), var(--panel));
+             border: 1px solid var(--line); border-radius: 10px; padding: .6rem .85rem; }
+  .counter b { display: block; font-size: 1.45rem; line-height: 1.25; }
+  .counter span { color: var(--muted); font-size: .66rem; text-transform: uppercase;
+                  letter-spacing: .09em; }
+  .counter.p1 b { color: var(--p1); } .counter.p1 { border-color: #4a1d1d; }
+  .counter.p2 b { color: var(--p2); } .counter.p2 { border-color: #4a3a10; }
+  .counter.accent b { color: var(--accent); }
+  .counter svg { display: block; margin-top: .25rem; }
+
+  /* ── layout grid ─────────────────────────────────────── */
+  #grid { display: grid; grid-template-columns: minmax(0, 2.2fr) minmax(280px, 1fr);
+          gap: .8rem; align-items: start; }
+  @media (max-width: 1000px) { #grid { grid-template-columns: minmax(0, 1fr); } }
+  .panel { background: var(--panel); border: 1px solid var(--line); border-radius: 12px;
+           overflow: hidden; }
+  .panel-head { display: flex; align-items: center; gap: .6rem; padding: .55rem .9rem;
+                border-bottom: 1px solid var(--line); background: var(--panel-2); }
+  .panel-head h2 { font-size: .8rem; margin: 0; color: var(--text); font-weight: 600;
+                   text-transform: uppercase; letter-spacing: .08em; }
+  .panel-head small { color: var(--muted); font-size: .7rem; font-weight: normal;
+                      text-transform: none; letter-spacing: 0; }
+  .panel-body { padding: .7rem .9rem; }
+
+  /* ── alert feed ──────────────────────────────────────── */
+  #feed-wrap { max-height: 60vh; overflow-y: auto; }
+  table { border-collapse: collapse; width: 100%; font-size: .8rem; }
+  th, td { padding: .38rem .6rem; text-align: left; border-bottom: 1px solid #141e33; }
+  th { color: var(--muted); position: sticky; top: 0; background: var(--panel);
+       font-size: .66rem; text-transform: uppercase; letter-spacing: .07em; z-index: 2; }
+  tbody tr { border-left: 3px solid transparent; }
+  tbody tr:hover { background: #101a2e; }
+  tbody tr.t-P1 { border-left-color: var(--p1); }
+  tbody tr.t-P2 { border-left-color: var(--p2); }
+  tbody tr.t-P3 { border-left-color: #2a3a55; }
+  .badge { display: inline-block; padding: .08rem .55rem; border-radius: 999px;
+           font-weight: 700; font-size: .72rem; letter-spacing: .03em; }
+  .badge.P1 { background: #3d1414; color: var(--p1); border: 1px solid #6b2020; }
+  .badge.P2 { background: #3d3010; color: var(--p2); border: 1px solid #6b5518; }
+  .badge.P3 { background: #1a2334; color: var(--p3); border: 1px solid #263349; }
+  td.signal { color: #9fb0c8; font-style: italic; }
+  td.mono { font-family: ui-monospace, monospace; color: #74849c; font-size: .74rem; }
+  td .impact-safety { color: var(--p1); font-weight: 600; }
+  td .impact-revenue { color: var(--p2); }
+
+  /* ── coverage chips ──────────────────────────────────── */
+  #coverage { display: flex; gap: .4rem; flex-wrap: wrap; }
+  #coverage .headline { color: var(--muted); font-size: .72rem; width: 100%; margin-bottom: .2rem; }
+  .chip { background: var(--panel-2); border: 1px solid var(--line); border-radius: 999px;
+          padding: .18rem .65rem; font-size: .73rem; color: #a9b7cb; cursor: pointer;
+          transition: border-color .15s; }
+  .chip:hover { border-color: var(--accent); }
+  .chip b { color: var(--text); }
+  .chip.p1 { border-color: #6b2020; } .chip.p2 { border-color: #6b5518; }
+  .chip.active { background: #0a3d4d; border-color: var(--accent); color: #d9f6fd; }
   .chip.active b { color: #fff; }
-  #sort-toggle { background: #1a2027; color: #b7c0cc; border: 1px solid #333c47;
-                 border-radius: 6px; padding: .2rem .6rem; cursor: pointer;
-                 font-size: .74rem; margin-left: .4rem; }
-  table { border-collapse: collapse; width: 100%; font-size: .82rem; }
-  th, td { padding: .32rem .55rem; text-align: left; border-bottom: 1px solid #262d36; }
-  th { color: #7a869a; position: sticky; top: 0; background: #101418; }
-  .badge { display: inline-block; padding: .05rem .5rem; border-radius: 10px; font-weight: 700; font-size: .75rem; }
-  .badge.P1 { background: #5c1a1a; color: #ff6b6b; }
-  .badge.P2 { background: #52400f; color: #fdcb6e; }
-  .badge.P3 { background: #2a2f36; color: #9aa4b2; }
-  td.signal { color: #b7c0cc; font-style: italic; }
-  td.mono { font-family: ui-monospace, monospace; color: #8a94a2; }
-  h2 { font-size: .95rem; color: #b7c0cc; margin: 1.4rem 0 .5rem; }
-  select { background: #1a2027; color: #e8eaed; border: 1px solid #333c47; border-radius: 6px; padding: .25rem .5rem; }
-  #chart-wrap { background: #1a2027; border-radius: 8px; padding: .8rem; margin-top: .5rem; overflow-x: auto; }
-  footer { color: #55606d; font-size: .72rem; margin-top: 1.2rem; }
+
+  /* ── connector health ────────────────────────────────── */
+  #health { display: grid; grid-template-columns: repeat(auto-fill, minmax(118px, 1fr));
+            gap: .4rem; }
+  .health-chip { border-radius: 8px; padding: .34rem .55rem; font-size: .72rem;
+                 background: var(--panel-2); border: 1px solid var(--line); color: #a9b7cb;
+                 display: flex; align-items: center; gap: .4rem; }
+  .health-chip b { color: var(--text); font-family: ui-monospace, monospace; font-size: .72rem; }
+  .health-chip i { font-style: normal; font-weight: 600; font-size: .68rem; margin-left: auto; }
+  .health-chip::before { content: ""; width: 7px; height: 7px; border-radius: 50%;
+                         background: var(--faint); flex: none; }
+  .health-chip.faulted { border-color: #6b2020; } .health-chip.faulted i { color: var(--p1); }
+  .health-chip.faulted::before { background: var(--p1); box-shadow: 0 0 6px var(--p1); }
+  .health-chip.atrisk { border-color: #6b5518; } .health-chip.atrisk i { color: var(--p2); }
+  .health-chip.atrisk::before { background: var(--p2); }
+  .health-chip.degrading i { color: var(--drift); }
+  .health-chip.degrading::before { background: var(--drift); }
+  .health-chip.healthy i { color: var(--ok); }
+  .health-chip.healthy::before { background: var(--ok); }
+  #health-more { color: var(--muted); font-size: .7rem; padding: .3rem 0 0; }
+
+  /* ── drift + telemetry row ───────────────────────────── */
+  #lower { display: grid; grid-template-columns: minmax(0, 2.2fr) minmax(280px, 1fr);
+           gap: .8rem; margin-top: .8rem; align-items: start; }
+  @media (max-width: 1000px) { #lower { grid-template-columns: minmax(0, 1fr); } }
+  select { background: var(--panel-2); color: var(--text); border: 1px solid var(--line);
+           border-radius: 6px; padding: .3rem .55rem; font-size: .78rem; max-width: 100%; }
+  #chart-wrap { overflow-x: auto; }
+  #chart-wrap svg, #wave { display: block; }
+  .sim-badge { background: #33240a; color: var(--p2); border: 1px solid #6b5518;
+               border-radius: 999px; padding: .1rem .55rem; font-size: .66rem;
+               font-weight: 700; letter-spacing: .06em; }
+  #wave-note { color: var(--muted); font-size: .7rem; margin-top: .4rem; line-height: 1.45; }
+
+  footer { color: var(--faint); font-size: .72rem; margin-top: 1.1rem; padding: 0 .2rem; }
+  code { background: var(--panel-2); border: 1px solid var(--line); border-radius: 4px;
+         padding: 0 .3rem; font-size: .95em; }
 </style>
 </head>
 <body>
-<h1>EV APM — Maintenance Decision Support <small>AI maintenance recommendations for EV charging infrastructure · polling every 2s</small>
+<div id="topbar">
+  <div id="brand"><b><em>EV APM</em> — Maintenance Decision Support</b>
+    <small>AI maintenance recommendations for EV charging infrastructure · polling every 2s</small></div>
+  <div class="spacer"></div>
+  <span id="conn-dot" title="pipeline link"></span><span id="conn-label">connecting…</span>
+  <span id="clock" class="num"></span>
   <button id="sort-toggle" title="toggle feed order">sort: priority</button>
-</h1>
+</div>
+
+<main>
 <div id="counters"></div>
-<div id="coverage"></div>
 
-<table>
-  <thead><tr>
-    <th>maintenance priority</th><th>fired at</th><th>station</th><th>connector</th>
-    <th>category</th><th>impact</th><th>recommended action</th><th>deciding signal</th>
-  </tr></thead>
-  <tbody id="rows"></tbody>
-</table>
+<div id="grid">
+  <div class="panel">
+    <div class="panel-head"><h2>Maintenance queue</h2>
+      <small>prioritized recommendations — P1 dispatch · P2 schedule · P3 log</small></div>
+    <div id="feed-wrap">
+      <table>
+        <thead><tr>
+          <th>maintenance priority</th><th>fired at</th><th>station</th><th>connector</th>
+          <th>category</th><th>impact</th><th>recommended action</th><th>deciding signal</th>
+        </tr></thead>
+        <tbody id="rows"></tbody>
+      </table>
+    </div>
+  </div>
 
-<h2>Connector health <small>rule table: unresolved P1 in buffer → Faulted ·
-P2 or ≥3 drift flags → At-risk · any drift flag → Degrading · else Healthy</small></h2>
-<div id="health"></div>
+  <div style="display:flex; flex-direction:column; gap:.8rem; min-width:0;">
+    <div class="panel">
+      <div class="panel-head"><h2>Category coverage</h2></div>
+      <div class="panel-body"><div id="coverage"></div></div>
+    </div>
+    <div class="panel">
+      <div class="panel-head"><h2>Connector health</h2>
+        <small>unresolved P1 → Faulted · P2 or ≥3 drift flags → At-risk ·
+        any drift flag → Degrading · else Healthy</small></div>
+      <div class="panel-body"><div id="health"></div><div id="health-more"></div></div>
+    </div>
+  </div>
+</div>
 
-<h2>Per-connector drift <small id="drift-note"></small></h2>
-<select id="connector-picker"><option value="">— select connector —</option></select>
-<div id="chart-wrap"><svg id="chart" width="860" height="300"></svg></div>
+<div id="lower">
+  <div class="panel">
+    <div class="panel-head"><h2>Per-connector drift</h2>
+      <small id="drift-note"></small>
+      <div class="spacer" style="flex:1"></div>
+      <select id="connector-picker"><option value="">— select connector —</option></select>
+    </div>
+    <div class="panel-body" id="chart-wrap"><svg id="chart" width="860" height="300"></svg></div>
+  </div>
+
+  <div class="panel">
+    <div class="panel-head"><h2>Telemetry preview</h2>
+      <span class="sim-badge">SIMULATED</span></div>
+    <div class="panel-body">
+      <svg id="wave" width="100%" height="180" viewBox="0 0 420 180" preserveAspectRatio="none"></svg>
+      <div id="wave-note">Illustrative waveform only — supply voltage (~227&nbsp;V nominal)
+      and active power for a hypothetical session. Real per-sample measurand streams are not
+      in the delivered exports (audit flags 11/20/26); no detection logic reads this panel.</div>
+    </div>
+  </div>
+</div>
 
 <footer>
   Demo replay speed: set <code>REPLAY_SPEED_MULTIPLIER</code> (0 = instant dump,
   1 = real time, 60 = one minute of history per second) on the replay service
   and re-run <code>docker compose up</code>.
 </footer>
+</main>
 
 <script>
 const TIER_ORDER = { P1: 0, P2: 1, P3: 2 };
@@ -208,17 +339,21 @@ async function poll() {
       all.sort((x, y) => (y.fired_at || '').localeCompare(x.fired_at || ''));
     const visible = categoryFilter ? all.filter(a => category(a) === categoryFilter) : all;
 
+    setLink(true);
     const rows = document.getElementById('rows');
     rows.replaceChildren();
     for (const a of visible) {
-      const tr = el('tr');
+      const tr = el('tr', a.priority_tier ? 't-' + a.priority_tier : null);
       const badge = el('td'); badge.append(Object.assign(el('span', 'badge ' + (a.priority_tier || '')), { textContent: a.priority_tier || '—' }));
-      tr.append(badge, el('td', null, a.fired_at),
+      const impact = el('td');
+      impact.append(el('span', (a.impact_class || '').startsWith('Safety') ? 'impact-safety' :
+                            (a.impact_class || '').startsWith('Revenue') ? 'impact-revenue' : '',
+                       a.impact_class || '—'));
+      tr.append(badge, el('td', 'num', a.fired_at),
         el('td', 'mono', a.hashed_charge_box_id ? a.hashed_charge_box_id.slice(0, 10) + '…' : '—'),
         el('td', null, a.physical_plug_id != null ? `plug ${a.physical_plug_id} (pk ${a.connector_pk})` : a.connector_pk),
         el('td', null, category(a)),
-        el('td', (a.impact_class || '').startsWith('Safety') ? 'technician-dispatch' :
-                 (a.impact_class || '').startsWith('Revenue') ? 'investigate' : '', a.impact_class || '—'),
+        impact,
         el('td', null, a.recommended_action || '—'),
         el('td', 'signal', a.deciding_signal || '—'));
       rows.append(tr);
@@ -260,11 +395,37 @@ async function poll() {
       counter('active P1', p1, 'p1'),
       counter('active P2', p2, 'p2'),
       counter('sessions processed', stats.sessions_closed ?? '—'),
-      counter('layer-2 flag rate', flagRate),
+      counter('layer-2 flag rate', flagRate, 'accent'),
       counter('categories detected', categories.size + ' / 19'),
-      counter('events', stats.events ?? '—'),
+      inflowCard(all),
     );
-  } catch (err) { /* keep last render on transient poll failure */ }
+  } catch (err) { setLink(false); /* keep last render on transient poll failure */ }
+}
+
+function setLink(up) {
+  const dot = document.getElementById('conn-dot');
+  dot.className = up ? 'live' : 'down';
+  document.getElementById('conn-label').textContent = up ? 'pipeline link' : 'link lost';
+}
+
+// alert-inflow card: bucket buffered alerts by fired_at minute, render a sparkline
+function inflowCard(all) {
+  const box = counter('alert inflow (buffer)', String(all.length));
+  const minutes = new Map();
+  for (const a of all) {
+    const m = (a.fired_at || '').slice(0, 16);
+    if (m) minutes.set(m, (minutes.get(m) || 0) + 1);
+  }
+  const series = [...minutes.keys()].sort().map(k => minutes.get(k)).slice(-40);
+  if (series.length > 1) {
+    const W = 120, H = 22, max = Math.max(...series);
+    const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+    svg.setAttribute('width', W); svg.setAttribute('height', H);
+    svg.append(polyline(series.map((v, i) =>
+      `${(W - 2) * i / (series.length - 1) + 1},${H - 2 - (H - 4) * v / max}`), '#22d3ee', 1.2));
+    box.append(svg);
+  }
+  return box;
 }
 
 function healthState(c, alertsByConn) {
@@ -304,8 +465,8 @@ async function refreshConnectors() {
     chip.append(Object.assign(document.createElement('i'), {textContent: label}));
     health.append(chip);
   }
-  if (rollup2.length > 40)
-    health.append(el('span', 'headline', `+${rollup2.length - 40} more (worst first)`));
+  document.getElementById('health-more').textContent =
+    rollup2.length > 40 ? `+${rollup2.length - 40} more (worst first)` : '';
   const picker = document.getElementById('connector-picker');
   const current = picker.value;
   picker.replaceChildren(new Option('— select connector —', ''));
@@ -335,9 +496,10 @@ async function drawDrift() {
   const svg = document.getElementById('chart');
   svg.replaceChildren();
   document.getElementById('drift-note').textContent = '';
-  if (!pk) return;
+  const hint = msg => svg.append(svgText(20, 30, msg, '#46536b'));
+  if (!pk) { hint('select a connector to plot its per-session anomaly-score trend'); return; }
   const records = await (await fetch('/drift/' + pk)).json();
-  if (!records.length) return;
+  if (!records.length) { hint('no scored sessions yet for this connector'); return; }
 
   const W = 860, H = 300, PAD = 34, midY = 150;
   const n = records.length;
@@ -372,9 +534,45 @@ async function drawDrift() {
     `${n} sessions, chronological — ${records.filter(r => r.flagged).length} drift-flagged`;
 }
 
+// ── simulated telemetry preview (illustrative only — see panel note) ──
+const WAVE_N = 140;
+const waveV = [], waveP = [];
+let waveT = 0;
+function waveTick() {
+  waveT += 1;
+  // supply voltage: 227 V nominal with sensor-grade jitter
+  waveV.push(227 + Math.sin(waveT / 9) * 1.4 + (Math.random() - 0.5) * 1.6);
+  // active power: session ramp-plateau-taper cycle, ~0–22 kW
+  const phase = (waveT % 260) / 260;
+  const envelope = phase < 0.12 ? phase / 0.12 : phase < 0.7 ? 1 : Math.max(0, (0.92 - phase) / 0.22);
+  waveP.push(Math.max(0, 22 * envelope + (Math.random() - 0.5) * 0.7));
+  if (waveV.length > WAVE_N) { waveV.shift(); waveP.shift(); }
+
+  const svg = document.getElementById('wave');
+  const W = 420, H = 180, PAD = 6;
+  const x = i => PAD + (W - 2 * PAD) * i / (WAVE_N - 1);
+  svg.replaceChildren();
+  // voltage pane (top): fixed 215–240 V window
+  const vy = v => 12 + 64 * (1 - (v - 215) / 25);
+  svg.append(polyline(waveV.map((v, i) => `${x(i)},${vy(v)}`), '#fbbf24', 1.3));
+  svg.append(svgText(PAD + 2, 10, 'supply voltage (V) — simulated', '#fbbf24'));
+  // power pane (bottom): 0–24 kW
+  const py = v => 96 + 76 * (1 - v / 24);
+  svg.append(polyline(waveP.map((v, i) => `${x(i)},${py(v)}`), '#22d3ee', 1.3));
+  svg.append(svgText(PAD + 2, 92, 'active power (kW) — simulated', '#22d3ee'));
+}
+
+function tickClock() {
+  document.getElementById('clock').textContent =
+    new Date().toISOString().slice(0, 19).replace('T', ' ') + ' UTC';
+}
+
 document.getElementById('connector-picker').addEventListener('change', drawDrift);
-poll(); refreshConnectors();
+poll(); refreshConnectors(); tickClock();
+for (let i = 0; i < WAVE_N; i++) waveTick();
 setInterval(() => { poll(); refreshConnectors(); drawDrift(); }, 2000);
+setInterval(waveTick, 350);
+setInterval(tickClock, 1000);
 </script>
 </body>
 </html>"""
