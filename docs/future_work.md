@@ -27,11 +27,18 @@ in this file, not in code.
 
 ## Product
 - Alert-log download button (judge quality-of-life, exit-doc nice-to-have 3).
-- Per-station rollup view; Slack/PagerDuty sink implementations.
+- Per-STATION rollup view (per-connector health rollup SHIPPED 2026-07-08
+  via week_3_recommended_plan — `detector/health_rollup.py`);
+  Slack/PagerDuty sink implementations.
+- Live OCPP-J adapter (websocket CSMS stub → event contract) so the agent
+  consumes simulator/live traffic directly, not just CSV replays — pending
+  written approval for any company-owned simulator (2026-07-10 assessment).
 - NL fault query; multi-tenant SaaS shape (deck slide 9).
 
 ## Tooling
-- `graphify` CLI not installed on the dev machine — the CLAUDE.md
-  knowledge-graph workflow is inoperative; install or drop the instruction.
-- pk-namespace mapping for the fault-export fleet segment (113 connectors,
-  zero inventory overlap — enrichment misses by design until then).
+- ~~`graphify` CLI not installed~~ — **RESOLVED 2026-07-08**: installed
+  (0.9.5, runs as `py -m graphify` on this machine), graph current.
+- ~~pk-namespace mapping for the fault-export fleet segment~~ — **RESOLVED
+  2026-07-08**: delivered, station names hashed per protocol, committed as
+  `data/reference/fault_segment_stations.csv`; enrichment covers all 113
+  connectors (audit flag 24).
