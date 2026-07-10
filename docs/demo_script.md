@@ -21,10 +21,12 @@ at the bottom). Numbers match `docs/deck_outline.md` exactly.
 > charging-management system. We read it."
 
 **0:20–0:40 — what we built** *(dashboard visible, feed still quiet)*
-> "This is an asset-performance agent for EV charging fleets. It watches the
-> CMS event stream, detects fault sequences as they happen, and turns them
-> into prioritized, explainable alerts. It tracks charger behavior — we are
-> explicitly not doing battery diagnostics."
+> "This is AI maintenance decision support for EV charging fleets. It
+> watches the CMS event stream, detects fault sequences as they happen, and
+> turns them into prioritized, explainable maintenance recommendations —
+> each with a recommended action, a likely root cause, and an impact class.
+> It tracks charger behavior — we are explicitly not doing battery
+> diagnostics."
 
 **0:40–1:30 — prioritization story** *(replay running; feed filling)*
 > "This is a 90-day fleet history replaying at sixty-to-one. Watch the
@@ -55,9 +57,10 @@ at the bottom). Numbers match `docs/deck_outline.md` exactly.
 
 **3:00–3:30 — close**
 > "Charging infrastructure is being built faster than anyone is learning to
-> operate it. Fleet and charge-point operators get grid-scale ops rigor
-> from data they already own — no new hardware, net-zero-aligned. That's
-> the agent."
+> operate it. Fleet and charge-point operators get maintenance
+> recommendations with grid-scale ops rigor from data they already own —
+> no new hardware, net-zero-aligned. That's maintenance decision support,
+> as an agent."
 
 ---
 

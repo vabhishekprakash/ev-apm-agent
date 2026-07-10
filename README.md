@@ -1,5 +1,7 @@
 ﻿# EV APM Agent
 
+![Live demo — the self-recovery downgrade](docs/assets/hook_selfrecovery.gif)
+
 A watchful operator for EV charging stations that catches faults the instant they happen and spots chargers starting to go bad before they fully fail.
 
 It plugs into the data the charging network already sends to its management system — no new sensors, no hardware changes.
