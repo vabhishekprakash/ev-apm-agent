@@ -258,3 +258,17 @@ path) — encoded as a Layer 1 sub-detector.
     **All 6 Layer-1 categories are now real-event verified**; the T1
     criteria erratum retires. Full-evidence (meter+txn) corroboration on
     real data still awaits a combined export — tracked in future_work.
+26. **Temperature is ALIVE at source (2026-07-10) — flag 20 partially
+    corrected.** The wide-matrix export (data/sql/final_ai_training_matrix
+    .csv, local-only: 2,703 rows, connectors 2009529/2013696, June 2026)
+    carries 79 REAL temperature readings, 28.1–66.5 °C (mean 48.9) —
+    squarely inside the documented plausibility bands. The three all-zero
+    deliveries (flags 11/20/21) were therefore an export-path defect, not a
+    dead sensor. Corrections: docs now say "absent from prior export paths"
+    rather than "dead at source". Temperature FEATURES remain out of the
+    submission (the sample is n=79, one month, two connectors, and carries
+    no sensor-location column — outlet asymmetry still impossible).
+    Also in this matrix: full measurand set (V/A/kW/Wh/SoC) with real
+    session context; window contains no err1051 rows, so full-evidence
+    corroboration still requires the requested window (see
+    data/sql/temperature_location_export.sql — the one-shot ask).
