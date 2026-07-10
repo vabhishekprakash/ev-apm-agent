@@ -65,6 +65,6 @@ the downgrade removes exactly the noise without hiding the dispatch-worthy
 majority of other categories.
 
 *Note: the committed `error_taxonomy.csv` collapses to 660 distinct vendor
-strings post-PII-redaction (16k+ idTag rows became identical `idTag=REDACTED`
-tokens); the 17,857 figure is the as-delivered distinct count, measured at
+strings post-PII-redaction (16k+ card-tag rows collapsed into identical
+redaction tokens); the 17,857 figure is the as-delivered distinct count, measured at
 100% resolution before the scrub (flags 22/24). Both runs gate green.*
