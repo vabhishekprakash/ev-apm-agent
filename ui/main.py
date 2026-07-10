@@ -193,7 +193,7 @@ function counter(label, value, cls) {
   return box;
 }
 
-function category(a) { return a.fault_category || a.fault_code || a.detector_source; }
+function category(a) { return (a.fault_category || a.fault_code || a.detector_source || '').replace(/_/g, '-'); }
 
 async function poll() {
   try {
