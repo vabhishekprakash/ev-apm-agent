@@ -210,18 +210,12 @@ PAGE = """<!doctype html>
   .health-chip.healthy::before { background: var(--ok); }
   #health-more { color: var(--muted); font-size: .7rem; padding: .3rem 0 0; }
 
-  /* ── drift + telemetry row ───────────────────────────── */
-  #lower { display: grid; grid-template-columns: minmax(0, 2.2fr) minmax(280px, 1fr);
-           gap: .8rem; margin-top: .8rem; align-items: start; }
-  @media (max-width: 1000px) { #lower { grid-template-columns: minmax(0, 1fr); } }
+  /* ── drift row ───────────────────────────────────────── */
+  #lower { margin-top: .8rem; }
   select { background: var(--panel-2); color: var(--text); border: 1px solid var(--line);
            border-radius: 6px; padding: .3rem .55rem; font-size: .78rem; max-width: 100%; }
   #chart-wrap { overflow-x: auto; }
-  #chart-wrap svg, #wave { display: block; }
-  .sim-badge { background: #33240a; color: var(--p2); border: 1px solid #6b5518;
-               border-radius: 999px; padding: .1rem .55rem; font-size: .66rem;
-               font-weight: 700; letter-spacing: .06em; }
-  #wave-note { color: var(--muted); font-size: .7rem; margin-top: .4rem; line-height: 1.45; }
+  #chart-wrap svg { display: block; }
 
   footer { color: var(--faint); font-size: .72rem; margin-top: 1.1rem; padding: 0 .2rem; }
   code { background: var(--panel-2); border: 1px solid var(--line); border-radius: 4px;
@@ -278,17 +272,6 @@ PAGE = """<!doctype html>
       <select id="connector-picker"><option value="">— select connector —</option></select>
     </div>
     <div class="panel-body" id="chart-wrap"><svg id="chart" width="860" height="300"></svg></div>
-  </div>
-
-  <div class="panel">
-    <div class="panel-head"><h2>Telemetry preview</h2>
-      <span class="sim-badge">SIMULATED</span></div>
-    <div class="panel-body">
-      <svg id="wave" width="100%" height="180" viewBox="0 0 420 180" preserveAspectRatio="none"></svg>
-      <div id="wave-note">Illustrative waveform only — supply voltage (~227&nbsp;V nominal)
-      and active power for a hypothetical session. Real per-sample measurand streams are not
-      in the delivered exports (audit flags 11/20/26); no detection logic reads this panel.</div>
-    </div>
   </div>
 </div>
 
@@ -534,34 +517,6 @@ async function drawDrift() {
     `${n} sessions, chronological — ${records.filter(r => r.flagged).length} drift-flagged`;
 }
 
-// ── simulated telemetry preview (illustrative only — see panel note) ──
-const WAVE_N = 140;
-const waveV = [], waveP = [];
-let waveT = 0;
-function waveTick() {
-  waveT += 1;
-  // supply voltage: 227 V nominal with sensor-grade jitter
-  waveV.push(227 + Math.sin(waveT / 9) * 1.4 + (Math.random() - 0.5) * 1.6);
-  // active power: session ramp-plateau-taper cycle, ~0–22 kW
-  const phase = (waveT % 260) / 260;
-  const envelope = phase < 0.12 ? phase / 0.12 : phase < 0.7 ? 1 : Math.max(0, (0.92 - phase) / 0.22);
-  waveP.push(Math.max(0, 22 * envelope + (Math.random() - 0.5) * 0.7));
-  if (waveV.length > WAVE_N) { waveV.shift(); waveP.shift(); }
-
-  const svg = document.getElementById('wave');
-  const W = 420, H = 180, PAD = 6;
-  const x = i => PAD + (W - 2 * PAD) * i / (WAVE_N - 1);
-  svg.replaceChildren();
-  // voltage pane (top): fixed 215–240 V window
-  const vy = v => 12 + 64 * (1 - (v - 215) / 25);
-  svg.append(polyline(waveV.map((v, i) => `${x(i)},${vy(v)}`), '#fbbf24', 1.3));
-  svg.append(svgText(PAD + 2, 10, 'supply voltage (V) — simulated', '#fbbf24'));
-  // power pane (bottom): 0–24 kW
-  const py = v => 96 + 76 * (1 - v / 24);
-  svg.append(polyline(waveP.map((v, i) => `${x(i)},${py(v)}`), '#22d3ee', 1.3));
-  svg.append(svgText(PAD + 2, 92, 'active power (kW) — simulated', '#22d3ee'));
-}
-
 function tickClock() {
   document.getElementById('clock').textContent =
     new Date().toISOString().slice(0, 19).replace('T', ' ') + ' UTC';
@@ -569,9 +524,7 @@ function tickClock() {
 
 document.getElementById('connector-picker').addEventListener('change', drawDrift);
 poll(); refreshConnectors(); tickClock();
-for (let i = 0; i < WAVE_N; i++) waveTick();
 setInterval(() => { poll(); refreshConnectors(); drawDrift(); }, 2000);
-setInterval(waveTick, 350);
 setInterval(tickClock, 1000);
 </script>
 </body>
