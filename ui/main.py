@@ -110,11 +110,13 @@ PAGE = """<!doctype html>
   b, .num { font-variant-numeric: tabular-nums; }
 
   /* ── top bar ─────────────────────────────────────────── */
-  #topbar { display: flex; align-items: center; gap: .9rem; padding: .65rem 1.2rem;
+  #topbar { display: flex; align-items: center; gap: .8rem; padding: .65rem 1.2rem;
             border-bottom: 1px solid var(--line); position: sticky; top: 0; z-index: 5;
             background: rgba(7,11,18,.92); backdrop-filter: blur(6px); }
+  #topbar > span, #topbar b { white-space: nowrap; }
+  @media (max-width: 1560px) { #brand small { display: none; } }
   #brand { display: flex; align-items: baseline; gap: .55rem; }
-  #brand b { font-size: 1.02rem; letter-spacing: .02em; }
+  #brand b { font-size: 1.02rem; letter-spacing: .02em; white-space: nowrap; }
   #brand b em { font-style: normal; color: var(--accent); }
   #brand small { color: var(--muted); font-size: .74rem; }
   #topbar .spacer { flex: 1; }
@@ -124,6 +126,11 @@ PAGE = """<!doctype html>
   #conn-dot.down { background: var(--p1); box-shadow: 0 0 8px var(--p1); }
   #conn-label, #clock { color: var(--muted); font-size: .72rem;
                         font-family: ui-monospace, monospace; }
+  #thru { color: var(--ok); font-size: .7rem; font-family: ui-monospace, monospace; }
+  #thru.idle { color: var(--faint); }
+  #evt-time { color: var(--text); font-size: .76rem; font-family: ui-monospace, monospace; }
+  #evt-time small, #clock small { color: var(--faint); font-size: .62rem;
+                                  letter-spacing: .06em; margin-right: .25rem; }
   #sort-toggle { background: var(--panel-2); color: var(--text); border: 1px solid var(--line);
                  border-radius: 6px; padding: .28rem .7rem; cursor: pointer; font-size: .74rem; }
   #sort-toggle:hover { border-color: var(--accent); }
@@ -167,16 +174,24 @@ PAGE = """<!doctype html>
   tbody tr:hover { background: #101a2e; }
   tbody tr.t-P1 { border-left-color: var(--p1); }
   tbody tr.t-P2 { border-left-color: var(--p2); }
-  tbody tr.t-P3 { border-left-color: #2a3a55; }
+  tbody tr.t-P3 { border-left-color: #4b586c; }
+  @keyframes p1pulse { from { background: #3d1414; } to { background: transparent; } }
+  tbody tr.flash { animation: p1pulse 1.6s ease-out 1; }
   .badge { display: inline-block; padding: .08rem .55rem; border-radius: 999px;
            font-weight: 700; font-size: .72rem; letter-spacing: .03em; }
   .badge.P1 { background: #3d1414; color: var(--p1); border: 1px solid #6b2020; }
   .badge.P2 { background: #3d3010; color: var(--p2); border: 1px solid #6b5518; }
   .badge.P3 { background: #1a2334; color: var(--p3); border: 1px solid #263349; }
-  td.signal { color: #9fb0c8; font-style: italic; }
-  td.mono { font-family: ui-monospace, monospace; color: #74849c; font-size: .74rem; }
-  td .impact-safety { color: var(--p1); font-weight: 600; }
-  td .impact-revenue { color: var(--p2); }
+  td.signal { color: #9fb0c8; font-style: italic; max-width: 280px;
+              white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  td.action { font-weight: 600; color: #eaf1fa; font-size: .82rem; }
+  .stn { display: block; font-family: ui-monospace, monospace; color: #5a6a84;
+         font-size: .66rem; margin-top: .12rem; }
+  .imp { display: inline-block; padding: .08rem .5rem; border-radius: 999px;
+         font-size: .7rem; font-weight: 600; border: 1px solid; white-space: nowrap; }
+  .imp.safety { background: #3d1414; color: var(--p1); border-color: #6b2020; }
+  .imp.revenue { background: #3d3010; color: var(--p2); border-color: #6b5518; }
+  .imp.transient { background: #161e2e; color: var(--p3); border-color: #263349; }
 
   /* ── coverage chips ──────────────────────────────────── */
   #coverage { display: flex; gap: .4rem; flex-wrap: wrap; }
@@ -189,13 +204,18 @@ PAGE = """<!doctype html>
   .chip.p1 { border-color: #6b2020; } .chip.p2 { border-color: #6b5518; }
   .chip.active { background: #0a3d4d; border-color: var(--accent); color: #d9f6fd; }
   .chip.active b { color: #fff; }
+  .chip.dim { opacity: .38; cursor: default; border-style: dashed; }
+  .chip.dim:hover { border-color: var(--line); }
 
   /* ── connector health ────────────────────────────────── */
   #health { display: grid; grid-template-columns: repeat(auto-fill, minmax(118px, 1fr));
             gap: .4rem; }
   .health-chip { border-radius: 8px; padding: .34rem .55rem; font-size: .72rem;
                  background: var(--panel-2); border: 1px solid var(--line); color: #a9b7cb;
-                 display: flex; align-items: center; gap: .4rem; }
+                 display: flex; align-items: center; gap: .4rem; cursor: pointer;
+                 transition: border-color .15s; }
+  .health-chip:hover { border-color: var(--accent); }
+  .health-chip.selected { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent) inset; }
   .health-chip b { color: var(--text); font-family: ui-monospace, monospace; font-size: .72rem; }
   .health-chip i { font-style: normal; font-weight: 600; font-size: .68rem; margin-left: auto; }
   .health-chip::before { content: ""; width: 7px; height: 7px; border-radius: 50%;
@@ -228,7 +248,9 @@ PAGE = """<!doctype html>
     <small>AI maintenance recommendations for EV charging infrastructure · polling every 2s</small></div>
   <div class="spacer"></div>
   <span id="conn-dot" title="pipeline link"></span><span id="conn-label">connecting…</span>
-  <span id="clock" class="num"></span>
+  <span id="thru"></span>
+  <span id="evt-time" class="num" title="timestamp of the newest event in the replayed stream"><small>EVENT</small>—</span>
+  <span id="clock" class="num" title="wall clock (UTC)"></span>
   <button id="sort-toggle" title="toggle feed order">sort: priority</button>
 </div>
 
@@ -242,7 +264,7 @@ PAGE = """<!doctype html>
     <div id="feed-wrap">
       <table>
         <thead><tr>
-          <th>maintenance priority</th><th>fired at</th><th>station</th><th>connector</th>
+          <th>maintenance priority</th><th>fired at</th><th>connector · station</th>
           <th>category</th><th>impact</th><th>recommended action</th><th>deciding signal</th>
         </tr></thead>
         <tbody id="rows"></tbody>
@@ -307,7 +329,16 @@ function counter(label, value, cls) {
   return box;
 }
 
-function category(a) { return (a.fault_category || a.fault_code || a.detector_source || '').replace(/_/g, '-'); }
+function category(a) {
+  // plain-language display name; the model-drift source keeps no internal jargon
+  const raw = a.fault_category || a.fault_code
+    || (a.detector_source === 'layer2_drift' ? 'session-drift' : a.detector_source) || '';
+  return raw.replace(/_/g, '-');
+}
+
+// new-P1 arrival cue: one subtle background pulse per newly seen P1 row
+const seenP1 = new Set();
+let firstPollDone = false;
 
 async function poll() {
   try {
@@ -322,25 +353,34 @@ async function poll() {
       all.sort((x, y) => (y.fired_at || '').localeCompare(x.fired_at || ''));
     const visible = categoryFilter ? all.filter(a => category(a) === categoryFilter) : all;
 
-    setLink(true);
+    setLink(true, stats);
     const rows = document.getElementById('rows');
     rows.replaceChildren();
     for (const a of visible) {
       const tr = el('tr', a.priority_tier ? 't-' + a.priority_tier : null);
+      const key = `${a.fired_at}|${a.connector_pk}|${category(a)}`;
+      if (a.priority_tier === 'P1' && firstPollDone && !seenP1.has(key)) tr.classList.add('flash');
+      if (a.priority_tier === 'P1') seenP1.add(key);
       const badge = el('td'); badge.append(Object.assign(el('span', 'badge ' + (a.priority_tier || '')), { textContent: a.priority_tier || '—' }));
+      // connector cell with the station hash as a caption underneath — keeps
+      // multi-station visibility without spending a whole column on it
+      const conn = el('td', null,
+        a.physical_plug_id != null ? `plug ${a.physical_plug_id} (pk ${a.connector_pk})` : String(a.connector_pk));
+      if (a.hashed_charge_box_id) conn.append(el('span', 'stn', a.hashed_charge_box_id.slice(0, 10) + '…'));
       const impact = el('td');
-      impact.append(el('span', (a.impact_class || '').startsWith('Safety') ? 'impact-safety' :
-                            (a.impact_class || '').startsWith('Revenue') ? 'impact-revenue' : '',
+      impact.append(el('span', 'imp ' + ((a.impact_class || '').startsWith('Safety') ? 'safety' :
+                                         (a.impact_class || '').startsWith('Revenue') ? 'revenue' : 'transient'),
                        a.impact_class || '—'));
-      tr.append(badge, el('td', 'num', a.fired_at),
-        el('td', 'mono', a.hashed_charge_box_id ? a.hashed_charge_box_id.slice(0, 10) + '…' : '—'),
-        el('td', null, a.physical_plug_id != null ? `plug ${a.physical_plug_id} (pk ${a.connector_pk})` : a.connector_pk),
+      const signal = el('td', 'signal', a.deciding_signal || '—');
+      signal.title = a.deciding_signal || '';
+      tr.append(badge, el('td', 'num', a.fired_at), conn,
         el('td', null, category(a)),
         impact,
-        el('td', null, a.recommended_action || '—'),
-        el('td', 'signal', a.deciding_signal || '—'));
+        el('td', 'action', a.recommended_action || '—'),
+        signal);
       rows.append(tr);
     }
+    firstPollDone = true;
 
     const p1 = all.filter(a => a.priority_tier === 'P1').length;
     const p2 = all.filter(a => a.priority_tier === 'P2').length;
@@ -357,9 +397,11 @@ async function poll() {
       rollup.set(key, entry);
     }
     const coverage = document.getElementById('coverage');
+    const ocppSeen = rollup.size - (rollup.has('session-drift') ? 1 : 0);
     coverage.replaceChildren(el('span', 'headline',
-      `${rollup.size} of 19 OCPP categories seen in buffer` +
-      (categoryFilter ? ` — filtering: ${categoryFilter} (click again to clear)` : ' — click a chip to filter:')));
+      `${ocppSeen} of 19 OCPP categories seen in buffer — bright = seen` +
+      (categoryFilter ? ` — filtering: ${categoryFilter} (click again to clear)` : ' (click to filter)') +
+      ' · dim = not yet observed:'));
     for (const [key, entry] of [...rollup].sort((a, b) => b[1].count - a[1].count)) {
       const chip = el('span', 'chip'
         + (entry.worst === 'P1' ? ' p1' : entry.worst === 'P2' ? ' p2' : '')
@@ -371,44 +413,68 @@ async function poll() {
       });
       coverage.append(chip);
     }
-    const flagRate = stats.sessions_scored
-      ? (100 * stats.layer2_flagged / stats.sessions_scored).toFixed(1) + '%' : '—';
+    // the 19 observed categories = distinct error_code values in the fleet's
+    // committed taxonomy (data/reference/error_taxonomy.csv). err-code and
+    // silence signals ride under OtherError in the real schema, so a seen
+    // err1051/err1024/telemetry-silence marks OtherError as covered.
+    const OCPP19 = ['ConnectorLockFailure', 'EVCommunicationError', 'GroundFailure',
+      'HighTemperature', 'InternalError', 'LocalListConflict', 'NoError', 'OtherError',
+      'OverCurrentFailure', 'OverVoltage', 'PowerMeterFailure', 'PowerSwitchFailure',
+      'ReaderFailure', 'ResetFailure', 'UnderVoltage', 'WeakSignal',
+      'Available after Finishing Status', 'Transaction Stopped', 'Websocket Disconnected'];
+    const covered = new Set(rollup.keys());
+    if (['err1051', 'err1024', 'telemetry-silence'].some(k => covered.has(k)))
+      covered.add('OtherError');
+    for (const cat of OCPP19) {
+      if (covered.has(cat)) continue;
+      const chip = el('span', 'chip dim');
+      chip.title = 'in the fleet taxonomy, not yet observed in this stream';
+      chip.append(el('b', null, cat));
+      coverage.append(chip);
+    }
+    // validated on the chronological held-out split: 3.62% (n=2,015 normal
+    // sessions, notebook 04) — the number documented in docs/category_metrics.md
+    // and docs/detailed_document.md §6. Static by design: it is the evaluated
+    // model number, not a live counter.
+    const finals = all.filter(a => a.detector_source !== 'layer2_drift' && a.stage !== 'candidate');
+    const cleared = finals.filter(a => (a.deciding_signal || '').startsWith('self-recovered')).length;
+    const autoClear = finals.length ? Math.round(100 * cleared / finals.length) + '%' : '—';
     const counters = document.getElementById('counters');
     counters.replaceChildren(
       counter('active P1', p1, 'p1'),
       counter('active P2', p2, 'p2'),
       counter('sessions processed', stats.sessions_closed ?? '—'),
-      counter('layer-2 flag rate', flagRate, 'accent'),
+      counter('false-alarm rate (validated)', '3.62%', 'accent'),
       counter('categories detected', categories.size + ' / 19'),
-      inflowCard(all),
+      counter('faults self-cleared, logged only', autoClear),
     );
+
+    // replay-simulated "now": the newest event timestamp in the stream
+    const newest = all.reduce((m, a) => (a.fired_at || '') > m ? a.fired_at : m, '');
+    const evt = document.getElementById('evt-time');
+    evt.replaceChildren(Object.assign(document.createElement('small'), {textContent: 'EVENT'}),
+      document.createTextNode(newest ? newest.slice(0, 19).replace('T', ' ') : '—'));
   } catch (err) { setLink(false); /* keep last render on transient poll failure */ }
 }
 
-function setLink(up) {
+let lastEvents = null, lastEventsAt = 0, lastChangeAt = 0;
+function setLink(up, stats) {
   const dot = document.getElementById('conn-dot');
   dot.className = up ? 'live' : 'down';
   document.getElementById('conn-label').textContent = up ? 'pipeline link' : 'link lost';
-}
-
-// alert-inflow card: bucket buffered alerts by fired_at minute, render a sparkline
-function inflowCard(all) {
-  const box = counter('alert inflow (buffer)', String(all.length));
-  const minutes = new Map();
-  for (const a of all) {
-    const m = (a.fired_at || '').slice(0, 16);
-    if (m) minutes.set(m, (minutes.get(m) || 0) + 1);
+  const thru = document.getElementById('thru');
+  if (!up || !stats || stats.events == null) { thru.textContent = ''; return; }
+  const now = Date.now();
+  if (lastEvents != null && stats.events > lastEvents) {
+    const rate = (stats.events - lastEvents) / Math.max((now - lastEventsAt) / 1000, 0.001);
+    thru.textContent = `live · ${rate >= 10 ? Math.round(rate) : rate.toFixed(1)} events/s`;
+    thru.className = '';
+    lastChangeAt = now;
+  } else if (now - lastChangeAt > 6000) {
+    thru.textContent = 'stream idle';
+    thru.className = 'idle';
   }
-  const series = [...minutes.keys()].sort().map(k => minutes.get(k)).slice(-40);
-  if (series.length > 1) {
-    const W = 120, H = 22, max = Math.max(...series);
-    const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
-    svg.setAttribute('width', W); svg.setAttribute('height', H);
-    svg.append(polyline(series.map((v, i) =>
-      `${(W - 2) * i / (series.length - 1) + 1},${H - 2 - (H - 4) * v / max}`), '#22d3ee', 1.2));
-    box.append(svg);
-  }
-  return box;
+  if (lastEvents !== stats.events) { lastEvents = stats.events; lastEventsAt = now; }
 }
 
 function healthState(c, alertsByConn) {
@@ -440,22 +506,41 @@ async function refreshConnectors() {
   const rollup2 = [...known.values()].map(c => [c, healthState(c, byConn)]);
   const rank = {faulted: 0, atrisk: 1, degrading: 2, healthy: 3};
   rollup2.sort((x, y) => rank[x[1][1]] - rank[y[1][1]] || x[0].connector_pk - y[0].connector_pk);
-  const health = document.getElementById('health');
-  health.replaceChildren();
-  for (const [c, [label, cls]] of rollup2.slice(0, 40)) {
-    const chip = el('span', 'health-chip ' + cls);
-    chip.append(el('b', null, `${c.connector_pk}`), document.createTextNode(' '));
-    chip.append(Object.assign(document.createElement('i'), {textContent: label}));
-    health.append(chip);
-  }
-  document.getElementById('health-more').textContent =
-    rollup2.length > 40 ? `+${rollup2.length - 40} more (worst first)` : '';
   const picker = document.getElementById('connector-picker');
   const current = picker.value;
   picker.replaceChildren(new Option('— select connector —', ''));
   for (const c of list)
     picker.append(new Option(`connector ${c.connector_pk} (${c.sessions} sessions, ${c.flagged} flagged)`, c.connector_pk));
   picker.value = current;
+
+  // default the drift panel to the most demo-relevant connector: worst
+  // health state first (At-risk preferred), among connectors that actually
+  // have session history to plot.
+  if (!picker.value) {
+    const pref = {atrisk: 0, degrading: 1, faulted: 2, healthy: 3};
+    const candidates = rollup2.filter(([c]) => c.sessions > 0)
+      .sort((x, y) => pref[x[1][1]] - pref[y[1][1]]
+                   || y[0].flagged - x[0].flagged || y[0].sessions - x[0].sessions);
+    if (candidates.length) { picker.value = candidates[0][0].connector_pk; drawDrift(); }
+  }
+
+  const health = document.getElementById('health');
+  health.replaceChildren();
+  for (const [c, [label, cls]] of rollup2.slice(0, 40)) {
+    const chip = el('span', 'health-chip ' + cls
+      + (String(c.connector_pk) === picker.value ? ' selected' : ''));
+    chip.title = 'show this connector in the degradation panel';
+    chip.append(el('b', null, `${c.connector_pk}`), document.createTextNode(' '));
+    chip.append(Object.assign(document.createElement('i'), {textContent: label}));
+    chip.addEventListener('click', () => {
+      picker.value = String(c.connector_pk);
+      drawDrift();
+      refreshConnectors();
+    });
+    health.append(chip);
+  }
+  document.getElementById('health-more').textContent =
+    rollup2.length > 40 ? `+${rollup2.length - 40} more (worst first)` : '';
 }
 
 function polyline(points, color, width) {
@@ -480,31 +565,77 @@ async function drawDrift() {
   svg.replaceChildren();
   document.getElementById('drift-note').textContent = '';
   const hint = msg => svg.append(svgText(20, 30, msg, '#46536b'));
-  if (!pk) { hint('select a connector to plot its per-session anomaly-score trend'); return; }
-  const records = await (await fetch('/drift/' + pk)).json();
+  if (!pk) { hint('select a connector to plot its per-session anomaly trend'); return; }
+  const [records, allAlerts] = await Promise.all([
+    (await fetch('/drift/' + pk)).json(),
+    (await fetch('/alerts?limit=200')).json(),
+  ]);
   if (!records.length) { hint('no scored sessions yet for this connector'); return; }
 
-  const W = 860, H = 300, PAD = 34, midY = 150;
+  const W = 860, H = 300, PAD = 34, midY = 170;
   const n = records.length;
   const x = i => PAD + (W - 2 * PAD) * (n === 1 ? 0.5 : i / (n - 1));
 
-  // top pane: anomaly score per session (higher = healthier)
-  const scores = records.map(r => r.anomaly_score ?? 0);
-  const sMin = Math.min(...scores, -0.15), sMax = Math.max(...scores, 0.15);
-  const sy = v => 12 + (midY - 40) * (1 - (v - sMin) / (sMax - sMin));
-  svg.append(polyline(records.map((r, i) => `${x(i)},${sy(r.anomaly_score ?? 0)}`), '#74b9ff'));
-  const thr = records[records.length - 1].layer2_threshold;
+  // top pane: per-session anomaly score, shown so that HIGHER = more unusual
+  // (display inversion only; the underlying score is unchanged)
+  const abn = records.map(r => -(r.anomaly_score ?? 0));
+  const rawThr = records[records.length - 1].layer2_threshold;
+  const thr = rawThr != null ? -rawThr : null;
+  const sMin = Math.min(...abn, thr ?? -0.15, -0.15);
+  const sMax = Math.max(...abn, thr ?? 0.15, 0.15);
+  const sy = v => 24 + (midY - 56) * (1 - (v - sMin) / (sMax - sMin));
   if (thr != null) {
     svg.append(polyline([`${PAD},${sy(thr)}`, `${W - PAD},${sy(thr)}`], '#ff6b6b', 1));
-    svg.append(svgText(W - PAD - 130, sy(thr) - 4, `threshold ${thr}`, '#ff6b6b'));
+    svg.append(svgText(W - PAD - 150, sy(thr) - 4, 'flag threshold — above = flagged', '#ff6b6b'));
   }
+  svg.append(polyline(abn.map((v, i) => `${x(i)},${sy(v)}`), '#74b9ff'));
   for (let i = 0; i < n; i++) if (records[i].flagged) {
     const dot = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
-    dot.setAttribute('cx', x(i)); dot.setAttribute('cy', sy(records[i].anomaly_score ?? 0));
+    dot.setAttribute('cx', x(i)); dot.setAttribute('cy', sy(abn[i]));
     dot.setAttribute('r', 3.5); dot.setAttribute('fill', '#ff6b6b');
+    dot.append(Object.assign(document.createElementNS('http://www.w3.org/2000/svg', 'title'),
+      {textContent: `flagged session — closed ${records[i].closed_at}`}));
     svg.append(dot);
   }
-  svg.append(svgText(PAD, 12, 'anomaly score per session (dots = flagged)', '#74b9ff'));
+  svg.append(svgText(PAD, 14, 'session anomaly score — higher = more unusual (red dots = flagged)', '#74b9ff'));
+
+  // fault-event annotations: each Layer 1 fault for this connector, placed at
+  // its position in the plotted session sequence (by timestamp). Faults that
+  // fired outside the plotted window are counted in the note but not drawn.
+  const first = records[0].closed_at || '', last = records[n - 1].closed_at || '~';
+  const faults = allAlerts.filter(a => String(a.connector_pk) === String(pk)
+    && a.detector_source !== 'layer2_drift' && a.stage !== 'candidate'
+    && a.fired_at);
+  const drawable = faults.filter(f => f.fired_at >= first && f.fired_at <= last);
+  const groups = new Map();  // session index -> {count, category}
+  for (const f of drawable) {
+    const idx = Math.min(n - 1, records.filter(r => (r.closed_at || '') <= f.fired_at).length);
+    const g = groups.get(idx) || { count: 0, category: category(f) };
+    g.count++;
+    groups.set(idx, g);
+  }
+  const marked = [...groups].sort((a, b) => b[0] - a[0]).slice(0, 8);
+  for (const [idx] of marked)
+    svg.append(polyline([`${x(idx)},22`, `${x(idx)},${midY - 26}`], '#fdcb6e', 1));
+  if (marked.length > 3) {
+    // clustered faults: one summary tag instead of overlapping labels
+    const total = marked.reduce((s, [, g]) => s + g.count, 0);
+    const fx = x(marked[0][0]);
+    svg.append(svgText(Math.max(PAD, Math.min(fx - 120, W - PAD - 190)), 32,
+      `⚠ ${total} fault events here: ${marked[0][1].category}`, '#fdcb6e'));
+  } else {
+    let lane = 0;
+    for (const [idx, g] of marked) {
+      const label = `⚠ ${g.count > 1 ? g.count + '× ' : ''}fault: ${g.category}`;
+      svg.append(svgText(Math.max(PAD, Math.min(x(idx) - 40, W - PAD - 160)),
+                         32 + (lane % 3) * 11, label, '#fdcb6e'));
+      lane++;
+    }
+  }
+
+  // x-axis time cues: first and last session close dates
+  svg.append(svgText(PAD, midY - 10, (records[0].closed_at || '').slice(0, 10), '#5a6a84'));
+  svg.append(svgText(W - PAD - 62, midY - 10, (records[n - 1].closed_at || '').slice(0, 10), '#5a6a84'));
 
   // bottom pane: session duration (minutes)
   const durations = records.map(r => (r.duration_sec ?? 0) / 60);
@@ -514,7 +645,8 @@ async function drawDrift() {
   svg.append(svgText(PAD, midY + 14, 'session duration (min)', '#2ecc71'));
 
   document.getElementById('drift-note').textContent =
-    `${n} sessions, chronological — ${records.filter(r => r.flagged).length} drift-flagged`;
+    `${n} sessions, oldest → newest — ${records.filter(r => r.flagged).length} flagged`
+    + (faults.length ? ` — ${drawable.length} of ${faults.length} fault events in view` : '');
 }
 
 function tickClock() {
@@ -522,7 +654,7 @@ function tickClock() {
     new Date().toISOString().slice(0, 19).replace('T', ' ') + ' UTC';
 }
 
-document.getElementById('connector-picker').addEventListener('change', drawDrift);
+document.getElementById('connector-picker').addEventListener('change', () => { drawDrift(); refreshConnectors(); });
 poll(); refreshConnectors(); tickClock();
 setInterval(() => { poll(); refreshConnectors(); drawDrift(); }, 2000);
 setInterval(tickClock, 1000);
