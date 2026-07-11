@@ -272,3 +272,32 @@ path) — encoded as a Layer 1 sub-detector.
     session context; window contains no err1051 rows, so full-evidence
     corroboration still requires the requested window (see
     data/sql/temperature_location_export.sql — the one-shot ask).
+
+27. **The one-shot ask LANDED (2026-07-11) — two deliveries, both gitignored
+    in data/raw/.**
+    (a) `Master_AI_Training_Matrix_Telemetry_Raw_Data.csv`: 65,994 REAL
+    temperature rows WITH sensor location — `Body` 21,998 / `Outlet` 43,995
+    (no Cable/Inlet rows exist), Celsius, connectors 2009529/1989806/1989807,
+    2026-05-12 → 2026-07-11. Flag 26's "no sensor-location column" is now
+    resolved at source; outlet-vs-body asymmetry is measurable. Arrived
+    after the Week 3 scope freeze → temperature features stay OUT of the
+    submission; integration is ledgered in docs/future_work.md.
+    (b) `final_ai_training_matrix_1051.csv`: 1,354 rows, connector 2036074,
+    June 2026, wide matrix (status + error/vendor codes + txn + stop_reason
+    + measurands). Contains TWO complete real err1051 episodes
+    (transactions 102202/102206, 2026-06-26): Charging(err1051) →
+    Finishing(err1051) → Available with `stop_reason=Other` on-row —
+    status + TRANSACTION-LINKAGE evidence, recoveries ≈4.2 s each.
+    Replay-verified: the adapter stream (data/interim/matrix1051_replay,
+    identifier values scrubbed) fires the machine 2/2 — final, transient,
+    P3, "self-recovered in 4s" — consistent with the flag-23/25 recovery
+    statistics. The meter-zero corroborating step remains fixture-only:
+    the fault windows carry no meter rows (Energy register populates only
+    139 rows elsewhere in the month).
+    ⚠ PII note: `vendor_error_code` in (b) carries raw card-tag strings on
+    some rows (e.g. RemoteStartRequested rows). Both files must never be
+    committed; any derivative/excerpt must scrub that column first (the
+    replay adapter blanks such values). Export-path quirk for adapters:
+    `error_code` holds non-OCPP strings on some rows ("Available after
+    Finishing Status", "Transaction Stopped") — harmless free text to the
+    parser, but do not treat them as OCPP categories.

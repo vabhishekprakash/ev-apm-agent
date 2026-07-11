@@ -10,9 +10,10 @@ in this file, not in code.
   22); production needs episode-collapse before alerting. The prioritizer's
   file-top constants are the tuning surface.
 - **err1051 full-evidence corroboration** — the machine is real-verified
-  end-to-end on the status spine (88/88, flag 25); the meter+transaction
-  corroborating steps still await one combined export window to be
-  exercised on real data.
+  end-to-end on the status spine (88/88, flag 25) and on a full
+  connector-month with transaction linkage (2/2 episodes, pk 2036074,
+  flag 27); only the meter-zero corroborating step still awaits a
+  meter-bearing fault window on real data.
 - **err1024 meter-signature gate** — the crash signature (current/power ≈ 0,
   supply nominal) can suppress false positives once measurand telemetry
   streams live (flag 21).
@@ -20,10 +21,15 @@ in this file, not in code.
   PowerMeterFailure, EVCommunicationError next by observed volume).
 
 ## Layer 2
-- Temperature features on a future export with a live sensor field
-  (flags 11/20 — code and tests already in place).
+- Temperature features — the located export is now ON DISK (flag 27a:
+  65,994 real readings with Body/Outlet sensor location, 3 connectors,
+  60 days), delivered after the scope freeze. Integration = map the
+  long-format export onto the sampledValue contract, revive
+  `_temp_asymmetry_features` (code and tests already in place, flags
+  11/20/26), retrain via notebooks 03–04.
 - Lead-time re-run with power/temperature features (current verdict:
-  orthogonal, lift 0.57× — docs/layer2_leadtime.md).
+  orthogonal, lift 0.57× — docs/layer2_leadtime.md; the flag-27a
+  temperature volume makes this re-run finally possible).
 - Autoencoder Layer 2; per-connector online retraining cadence.
 
 ## Product
