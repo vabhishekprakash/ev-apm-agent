@@ -177,6 +177,20 @@ PAGE = """<!doctype html>
   tbody tr.t-P3 { border-left-color: #4b586c; }
   @keyframes p1pulse { from { background: #3d1414; } to { background: transparent; } }
   tbody tr.flash { animation: p1pulse 1.6s ease-out 1; }
+  tbody tr.alert-row { cursor: pointer; }
+  tbody tr.open { background: #101a2e; }
+  tr.trace-row td { background: #0b1322; border-left: 3px solid var(--accent);
+                    padding: .65rem 1rem .75rem; cursor: default; }
+  .trace-title { color: var(--accent); font-size: .68rem; font-weight: 700;
+                 text-transform: uppercase; letter-spacing: .09em; margin-bottom: .45rem; }
+  .trace { display: grid; grid-template-columns: max-content 1fr; gap: .3rem .8rem;
+           font-size: .78rem; }
+  .trace dt { color: var(--muted); font-size: .66rem; text-transform: uppercase;
+              letter-spacing: .07em; padding-top: .1rem; white-space: nowrap; }
+  .trace dd { margin: 0; color: #c6d2e2; line-height: 1.45; }
+  .trace dd b { color: var(--text); }
+  .trace dd.conclusion { color: #9fb0c8; font-style: italic; }
+  .trace-foot { color: var(--faint); font-size: .66rem; margin-top: .5rem; }
   .badge { display: inline-block; padding: .08rem .55rem; border-radius: 999px;
            font-weight: 700; font-size: .72rem; letter-spacing: .03em; }
   .badge.P1 { background: #3d1414; color: var(--p1); border: 1px solid #6b2020; }
@@ -309,6 +323,9 @@ const TIER_ORDER = { P1: 0, P2: 1, P3: 2 };
 // dry-run must-fixes: feed order toggle + category filter (click a chip)
 let sortMode = 'tier';       // 'tier' | 'newest'
 let categoryFilter = null;   // category string or null = all
+let openTraceKey = null;     // row whose decision trace is expanded (survives re-render)
+
+function rowKey(a) { return `${a.fired_at}|${a.connector_pk}|${category(a)}`; }
 
 document.getElementById('sort-toggle').addEventListener('click', () => {
   sortMode = sortMode === 'tier' ? 'newest' : 'tier';
@@ -336,6 +353,65 @@ function category(a) {
   return raw.replace(/_/g, '-');
 }
 
+// ── Decision trace: renders the recorded rule chain for one alert, built
+// entirely from fields already on the payload. No live reasoning, no model —
+// it reads back the deterministic logic that produced the recommendation.
+function traceRow(a) {
+  const isDrift = a.detector_source === 'layer2_drift';
+  const detected = isDrift
+    ? `session-profile drift — likely (anomaly score ${a.anomaly_score ?? '—'}`
+      + (a.confidence != null ? `, ${a.confidence}% confidence)` : ')')
+    : `${category(a)} signature — certain (rule match)`;
+
+  // the deciding_signal is the prioritizer's own record: base rule first,
+  // then any escalations it appended, ';'-joined. Parse, don't recompute.
+  const clauses = (a.deciding_signal || '').split(';').map(s => s.trim()).filter(Boolean);
+  const base = clauses[0] || '—';
+  const escalations = clauses.slice(1);
+
+  const dl = el('dl', 'trace');
+  const pair = (term, text, cls) => {
+    dl.append(el('dt', null, term));
+    dl.append(el('dd', cls || null, text));
+  };
+  const pairNode = (term, node) => { dl.append(el('dt', null, term)); dl.append(node); };
+
+  pair('Detected', detected);
+  if (a.likely_root_cause) pair('Likely cause', a.likely_root_cause);
+  pair('Priority rule', base);
+
+  // self-recovery check is the flagship rule — spell it out for err1051 from
+  // the recovery_seconds field and the documented 15s transient window. Only
+  // the final alert carries a recovery verdict; a candidate is still awaiting
+  // one, so its Priority-rule line ("awaiting recovery") already says so.
+  if (category(a) === 'err1051' && a.stage === 'final') {
+    const r = a.recovery_seconds;
+    pair('Self-recovery check',
+      r == null ? 'no recovery observed in the window → technician dispatched'
+      : r <= 15 ? `recovered in ${Math.round(r)}s — within the 15-second transient window, so downgraded to log-only`
+      : `recovery took ${Math.round(r)}s — beyond the 15-second transient window, so a technician is dispatched`);
+  }
+
+  if (escalations.length) {
+    const ul = el('dd');
+    for (const esc of escalations) ul.append(el('div', null, '• ' + esc));
+    pairNode('Escalations applied', ul);
+  }
+
+  pair('Recommendation',
+    `${a.priority_tier || '—'} → ${a.recommended_action || '—'} · ${a.impact_class || '—'}`);
+  pair('Conclusion', a.deciding_signal || '—', 'conclusion');
+
+  const cell = el('td');
+  cell.colSpan = 7;
+  cell.append(el('div', 'trace-title', 'Why this recommendation'), dl,
+    el('div', 'trace-foot',
+      'Recorded decision logic — deterministic rules and lookups, not live model reasoning.'));
+  const tr = el('tr', 'trace-row');
+  tr.append(cell);
+  return tr;
+}
+
 // new-P1 arrival cue: one subtle background pulse per newly seen P1 row
 const seenP1 = new Set();
 let firstPollDone = false;
@@ -357,8 +433,9 @@ async function poll() {
     const rows = document.getElementById('rows');
     rows.replaceChildren();
     for (const a of visible) {
-      const tr = el('tr', a.priority_tier ? 't-' + a.priority_tier : null);
-      const key = `${a.fired_at}|${a.connector_pk}|${category(a)}`;
+      const key = rowKey(a);
+      const tr = el('tr', (a.priority_tier ? 't-' + a.priority_tier : '') + ' alert-row'
+        + (key === openTraceKey ? ' open' : ''));
       if (a.priority_tier === 'P1' && firstPollDone && !seenP1.has(key)) tr.classList.add('flash');
       if (a.priority_tier === 'P1') seenP1.add(key);
       const badge = el('td'); badge.append(Object.assign(el('span', 'badge ' + (a.priority_tier || '')), { textContent: a.priority_tier || '—' }));
@@ -378,7 +455,13 @@ async function poll() {
         impact,
         el('td', 'action', a.recommended_action || '—'),
         signal);
+      tr.title = 'click for the decision trace';
+      tr.addEventListener('click', () => {
+        openTraceKey = openTraceKey === key ? null : key;
+        poll();
+      });
       rows.append(tr);
+      if (key === openTraceKey) rows.append(traceRow(a));
     }
     firstPollDone = true;
 
