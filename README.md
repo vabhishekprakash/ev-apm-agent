@@ -24,6 +24,7 @@ We'll prove it on real data from 39 stations across 5+ vendors, deployed as a dr
 |------|------|
 | Abhishek | Layer 1 + integration |
 | Akhil | Layer 2 + data audit |
+| Hrishikesh | Testing + documentation |
 
 ## Project Structure
 
@@ -98,7 +99,8 @@ split (notebook 04); alert thresholds documented in `.env.example`.
 ## Attribution
 
 Built for the **ET AI Hackathon 2026** by V. Abhishek Prakash (Layer 1 +
-integration) and Akhil Prasad (Layer 2 + data audit).
+integration), Akhil Prasad (Layer 2 + data audit), and Hrishikesh
+(testing + documentation).
 
 Data provenance: anonymized OCPP telemetry exports from a production
 charging-management system (charge-box ids SHA-256-hashed, geo coordinates
