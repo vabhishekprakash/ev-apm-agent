@@ -25,6 +25,34 @@ FRAME_EVERY_S = 0.8
 FRAMES = 26
 
 
+# The committed GIF is captured from the real err-sequence export
+# (data/interim/sequences_replay, real err1051 self-recovery) via a DATA_DIR
+# override; the fixture default keeps this script runnable on a fresh clone
+# where the gitignored real data is absent.
+DATA_DIR = os.environ.get("DATA_DIR", str(ROOT / "tests" / "fixtures" / "demo_replay"))
+SPEED = os.environ.get("REPLAY_SPEED_MULTIPLIER", "45")
+# frame at which the decision trace is opened, so the clip shows the new
+# "why this recommendation" panel expanding on a self-recovery row
+OPEN_TRACE_AT = 8
+
+# filter the queue to err1051 so the self-recovery rows surface, then click one
+FILTER_JS = """() => {
+  const chip = [...document.querySelectorAll('#coverage .chip:not(.dim)')]
+    .find(c => c.textContent.includes('err1051'));
+  if (chip) chip.click();
+}"""
+OPEN_TRACE_JS = """() => {
+  const rows = [...document.querySelectorAll('tr.alert-row')];
+  const pick = rows.find(t => t.textContent.includes('self-recovered')) || rows[0];
+  if (pick) pick.click();
+}"""
+# keep the expanded trace centred in frame as the 2s poll re-renders
+SCROLL_JS = """() => {
+  const t = document.querySelector('tr.trace-row');
+  if (t) t.scrollIntoView({block: 'center'});
+}"""
+
+
 def main() -> None:
     env = {**os.environ}
     ui = subprocess.Popen(
@@ -33,12 +61,10 @@ def main() -> None:
         cwd=ROOT / "ui", env=env)
     try:
         time.sleep(4)
-        # fault story at 12x so the feed builds over ~20s of wall clock
         replay = subprocess.Popen(
             [sys.executable, str(ROOT / "replay" / "main.py")],
             stdout=subprocess.PIPE, env={**env,
-                "DATA_DIR": str(ROOT / "tests" / "fixtures" / "demo_replay"),
-                "REPLAY_SPEED_MULTIPLIER": "45"})
+                "DATA_DIR": DATA_DIR, "REPLAY_SPEED_MULTIPLIER": SPEED})
         detector = subprocess.Popen(
             [sys.executable, "main.py"], stdin=replay.stdout,
             cwd=ROOT / "detector", env={**env, "ALERT_SINK": "http",
@@ -47,10 +73,16 @@ def main() -> None:
         frames = []
         with sync_playwright() as p:
             browser = p.chromium.launch()
-            page = browser.new_page(viewport={"width": 1280, "height": 720})
+            page = browser.new_page(viewport={"width": 1280, "height": 800})
             page.goto(f"http://localhost:{PORT}/")
             for i in range(FRAMES):
                 time.sleep(FRAME_EVERY_S)
+                if i == OPEN_TRACE_AT - 2:
+                    page.evaluate(FILTER_JS)
+                if i == OPEN_TRACE_AT:
+                    page.evaluate(OPEN_TRACE_JS)
+                if i >= OPEN_TRACE_AT:
+                    page.evaluate(SCROLL_JS)
                 frames.append(Image.open(
                     __import__("io").BytesIO(page.screenshot())).convert("P",
                                                                          palette=Image.ADAPTIVE))
