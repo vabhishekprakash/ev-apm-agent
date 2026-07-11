@@ -105,11 +105,14 @@ Real fault data arrived late and in pieces, each analyzed and documented:
 
 **Honest data limitations.** Temperature was absent (all-zero) in every
 fault-window export (flags 11/20); a late wide-matrix export proved real
-values exist at source (28–66 °C, n=79 — flag 26), but without sensor
-locations or scale, so temperature features remain out of scope. The err1051 full 5-step machine requires a combined
-status + meter + transaction window that no export delivered, so it is
-fixture-verified with real sequence-shape and recovery statistics rather than
-end-to-end on live events (flag 23).
+values exist at source (28–66 °C, n=79 — flag 26), and a final post-freeze
+delivery added 65,994 located readings (Body/Outlet sensors — flag 27). Both
+arrived after the Week 3 scope freeze, so temperature features stay out of
+this submission and are ledgered as future work. The err1051 machine is
+real-verified end-to-end on its status spine (88/88 real sequences, flag 25)
+and on a full connector-month with transaction linkage (2/2 episodes, flag
+27); its meter-zero corroborating step is exercised only on fixtures, because
+no delivered fault window carries meter rows.
 
 ## 5. Methods
 
@@ -158,17 +161,20 @@ orthogonal degradation tracking rather than early warning (flag 17).
   shape rules and the rest via the already-labeled `error_code` field —
   "resolves to a labeled category", never "routed by rules" (flag 22).
 - **Real-event detection: 100% per category** — err1024 99/99, GroundFailure
-  79,480/79,480, WeakSignal 150/150, OverVoltage 51/51, UnderVoltage
-  (18/18 on the capped export). **5 of 6 categories are real-event verified**;
-  err1051 is fixture-verified with real sequence-shape confirmation (flags
-  18, 22, 23).
+  79,480/79,480, WeakSignal 150/150, OverVoltage 51/51, UnderVoltage 637/637
+  (plus 18/18 on the capped export). **All six categories are real-event
+  verified**: err1051's machine fired end-to-end on 88/88 real status-spine
+  sequences and 2/2 episodes of a full connector-month with transaction
+  linkage; only its meter-zero corroborating step remains fixture-only
+  (flags 18, 22, 23, 25, 27).
 - **The 13-second story, vindicated on real data:** across 190 real err1051
   events, median recovery is 10 s and **80% self-recover within 15 s** — so
   the P3 downgrade removes exactly that noise. Across *all* fault types only
   ~42% self-clear (n=2,041), which is why every other category defaults to
   P2/P1 (flags 12, 23).
 - **Pipeline:** `docker compose up` from a fresh clone brings all services up
-  with the UI answering HTTP 200; 60 automated tests pass; the anonymization
+  with the UI answering HTTP 200; 79 automated tests pass (76 on a fresh
+  clone — 3 skip without a gitignored real-data file); the anonymization
   audit passes.
 
 ## 7. Deployment
@@ -192,10 +198,12 @@ Tracked in full in `docs/future_work.md`. Highlights:
 - **GroundFailure episode dedup / rate-limiting** — the real export shows
   79,480 events in 14 months on one fleet segment (a chattering-sensor
   cohort); production needs episode-collapse before alerting.
-- **err1051 full-machine real verification** on a combined
-  status + meter + transaction export.
-- **Temperature features** revived if a future export carries a live sensor
-  field (code and tests are already in place).
+- **err1051 meter-zero corroboration** on a meter-bearing real fault window
+  (status-spine and transaction-linkage steps are already real-verified —
+  flags 25/27).
+- **Temperature features** — a located export (65,994 readings, Body/Outlet
+  sensors) landed post-freeze (flag 27); code and tests are already in
+  place, integration is queued.
 - **Autoencoder Layer 2**, natural-language fault query, multi-tenant SaaS,
   and detectors for the remaining 13 OCPP categories.
 

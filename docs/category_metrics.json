@@ -1,7 +1,7 @@
 [
   {
     "stream": "real err-sequence export (21,910 rows)",
-    "provenance": "REAL sequences: err1024 99/99, UnderVoltage 637, WeakSignal 45; err1051 machine needs combined status+meter+txn stream (flag 23)",
+    "provenance": "REAL sequences: err1024 99/99, UnderVoltage 637, WeakSignal 45; err1051 machine real-fired 88/88 on the status spine (flag 25)",
     "total_alerts": 869,
     "categories": [
       {
@@ -49,6 +49,35 @@
         "priority_distribution": {
           "P3": 67,
           "P2": 21
+        },
+        "time_to_alert_s": null,
+        "note": "stateful: candidate at StopTransaction + final at recovery"
+      }
+    ]
+  },
+  {
+    "stream": "err1051 connector-month export (pk 2036074, June 2026)",
+    "provenance": "REAL month: 2/2 err1051 episodes fire on the status spine (4 s self-recoveries, P3); transaction linkage documented in the export (flag 27)",
+    "total_alerts": 5,
+    "categories": [
+      {
+        "category": "err1024",
+        "events_observed": null,
+        "alerts": 3,
+        "detection_rate": null,
+        "priority_distribution": {
+          "P2": 3
+        },
+        "time_to_alert_s": 0,
+        "note": "fires on the event itself"
+      },
+      {
+        "category": "err1051",
+        "events_observed": null,
+        "alerts": 2,
+        "detection_rate": null,
+        "priority_distribution": {
+          "P3": 2
         },
         "time_to_alert_s": null,
         "note": "stateful: candidate at StopTransaction + final at recovery"

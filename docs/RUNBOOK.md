@@ -173,7 +173,7 @@ DATA_DIR=path/to/your/export REPLAY_SPEED_MULTIPLIER=0   python replay/main.py |
 ## 4. Verify correctness (automated)
 
 ```bash
-python -m pytest tests/ -q            # 60 tests, all pass
+python -m pytest tests/ -q            # 79 tests, all pass (76 on a fresh clone)
 bash tests/anonymization_audit.sh     # data-governance gate → PASS
 bash scripts/run_all_tests.sh         # everything above in one shot
 ```
