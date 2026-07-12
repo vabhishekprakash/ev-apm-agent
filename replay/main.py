@@ -25,6 +25,10 @@ from pathlib import Path
 
 DATA_DIR = Path(os.environ.get("DATA_DIR", "./data/raw"))
 SPEED = float(os.environ.get("REPLAY_SPEED_MULTIPLIER", "1"))
+# When DATA_DIR has no replay sources (e.g. a fresh public clone where the real
+# exports under data/raw are gitignored), fall back to the bundled demo fixture
+# so `docker compose up` shows a populated dashboard with no second terminal.
+DEMO_FALLBACK = Path(__file__).resolve().parent.parent / "tests" / "fixtures" / "demo_replay"
 
 # filename -> (event_type, timestamp column)
 SOURCES = {
@@ -35,14 +39,27 @@ SOURCES = {
 }
 
 
+def _effective_data_dir() -> Path:
+    """DATA_DIR if it holds any replay source, else the bundled demo fixture."""
+    known = list(SOURCES) + ["transaction.csv"]
+    if any((DATA_DIR / name).exists() for name in known):
+        return DATA_DIR
+    if DATA_DIR != DEMO_FALLBACK and any((DEMO_FALLBACK / name).exists() for name in known):
+        print(f"note: no replay sources under {DATA_DIR}; using bundled demo "
+              f"fixture {DEMO_FALLBACK.name} (set DATA_DIR to override)", file=sys.stderr)
+        return DEMO_FALLBACK
+    return DATA_DIR
+
+
 def parse_ts(raw: str) -> datetime:
     return datetime.fromisoformat(raw.strip('"'))
 
 
 def load_events() -> list[dict]:
+    data_dir = _effective_data_dir()
     events = []
     for filename, (event_type, ts_col) in SOURCES.items():
-        path = DATA_DIR / filename
+        path = data_dir / filename
         if not path.exists():
             print(f"warning: {path} missing, skipping", file=sys.stderr)
             continue
@@ -53,7 +70,7 @@ def load_events() -> list[dict]:
                 )
 
     # Transactions fan out into start/stop events.
-    tx_path = DATA_DIR / "transaction.csv"
+    tx_path = data_dir / "transaction.csv"
     if tx_path.exists():
         with tx_path.open(newline="", encoding="utf-8-sig") as f:
             for row in csv.DictReader(f):
