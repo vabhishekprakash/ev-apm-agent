@@ -38,7 +38,9 @@ Wait ~30 s, then confirm all services are healthy and the UI answers:
 
 ```bash
 docker compose ps                                   # replay / detector / ui
-curl -s -o /dev/null -w "%{http_code}\n" http://localhost:8000/   # expect 200
+curl -s -o /dev/null -w "%{http_code}\n" http://localhost:8000/   # expect 200 
+                          or
+curl.exe -s -o NUL -w "%{http_code}\n" http://localhost:8000/    # expect 200
 ```
 
 Open **http://localhost:8000** in a browser. By default the pipeline replays
