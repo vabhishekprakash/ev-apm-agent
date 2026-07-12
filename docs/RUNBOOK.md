@@ -43,9 +43,23 @@ curl -s -o /dev/null -w "%{http_code}\n" http://localhost:8000/   # expect 200
 curl.exe -s -o NUL -w "%{http_code}\n" http://localhost:8000/    # expect 200
 ```
 
-Open **http://localhost:8000** in a browser. By default the pipeline replays
-whatever is mounted at `data/raw` (empty in a fresh public clone — see §3 to
-drive it with the bundled fixtures).
+Open **http://localhost:8000** in a browser. **The dashboard populates within
+seconds** — no second terminal, no extra flags. By default the pipeline
+replays the real exports under `data/raw`; on a fresh public clone (where
+`data/raw` is gitignored/empty) it automatically falls back to the bundled
+`demo_replay` fixture so all six fault categories still appear. `.env.example`
+ships `REPLAY_SPEED_MULTIPLIER=0` (instant dump); set it to `60` for a
+progressive, live-feel build when recording the demo.
+
+**Demo startup sequence (what loads where):**
+- **Maintenance queue** — prioritized P1/P2/P3 rows fill immediately; click any
+  row for the "Why this recommendation" decision trace.
+- **Connector health** — Faulted / At-risk / Degrading / Healthy tiles; click a
+  tile to load that connector into the drift panel.
+- **Per-connector drift** — auto-selects the worst-health connector with
+  history and plots its anomaly trend + fault annotations (dense on the real
+  `data/raw` history; sparse on the fresh-clone fixture).
+- **Category coverage** — all 19 OCPP categories, seen ones bright.
 
 Stop / reset:
 ```bash

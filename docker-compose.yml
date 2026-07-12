@@ -14,7 +14,11 @@ services:
     command: sh -c "python main.py >> /bus/events.jsonl"
     environment:
       DATA_DIR: ${DATA_DIR:-/app/data/raw}
-      REPLAY_SPEED_MULTIPLIER: ${REPLAY_SPEED_MULTIPLIER:-1}
+      # 0 = dump the whole history at once so `docker compose up` shows a
+      # populated dashboard within seconds (real exports span months; the old
+      # default of 1 = real-time left it blank). Set REPLAY_SPEED_MULTIPLIER=60
+      # for a progressive, live-feel build when recording the demo.
+      REPLAY_SPEED_MULTIPLIER: ${REPLAY_SPEED_MULTIPLIER:-0}
     volumes:
       - ./data:/app/data:ro
       - ./tests/fixtures:/app/tests/fixtures:ro
