@@ -36,14 +36,18 @@ MODELED = {"StatusNotification", "MeterValues", "StartTransaction", "StopTransac
 
 
 def test_sample_file_parses_every_frame():
-    """Every non-blank line yields a frame; nothing is left unparsed."""
-    lines = [ln for ln in SAMPLE.read_text(encoding="utf-8-sig").splitlines() if ln.strip()]
+    """Every non-blank, non-header line yields a frame; nothing is unparsed."""
+    lines = [ln for ln in SAMPLE.read_text(encoding="utf-8-sig").splitlines()
+             if ln.strip() and not adapter._is_header(ln)]
     parsed = [adapter.parse_line(ln) for ln in lines]
     assert all(p is not None for p in parsed), "some lines failed to parse"
     # every frame opens with an OCPP-J message-type integer (2/3/4)
     assert all(p["frame"][0] in (2, 3, 4) for p in parsed)
-    kinds = {p["message_type"] for p in parsed if p["message_type"]}
-    assert MODELED & kinds, "expected modeled action types in the sample"
+    # the OCPP action is frame[2] on a CALL (the messageType column is the
+    # INCOMING/OUTGOING direction on real logs, not the action)
+    actions = {p["frame"][2] for p in parsed
+               if p["frame"][0] == 2 and len(p["frame"]) > 2}
+    assert MODELED & actions, "expected modeled OCPP actions in the sample"
 
 
 def test_embedded_semicolon_and_doubled_quotes_survive():
@@ -65,17 +69,18 @@ def test_meter_values_flatten_to_expected_measurand_set():
     events = adapter.load_events(SAMPLE)
     meters = [e for e in events if e["event_type"] == "MeterValues"]
     assert meters, "sample should contain a MeterValues event"
-    meter = meters[0]
-    # energy register drives meter_reading_wh
-    assert meter["meter_reading_wh"] > 0
-    measurands = {s["measurand"] for s in meter["sampled_values"]}
+    # the energy register drives meter_reading_wh
+    assert any(m["meter_reading_wh"] > 0 for m in meters)
+    # real OCPP frames spread measurands across meter frames — assert the union
+    measurands = {s["measurand"] for m in meters for s in m["sampled_values"]}
     for expected in ("Energy.Active.Import.Register", "SoC", "Voltage",
                      "Current.Import", "Power.Active.Import", "Temperature"):
         assert expected in measurands, f"missing measurand {expected}"
-    # temperature carries sensor locations (Body/Outlet/Inlet)
-    temp_locs = {s["location"] for s in meter["sampled_values"]
+    # temperature carries distinct sensor locations (body + outlet at minimum;
+    # the real fleet reports these two, the synthetic fixture adds inlet)
+    temp_locs = {s["location"] for m in meters for s in m["sampled_values"]
                  if s["measurand"] == "Temperature"}
-    assert {"Body", "Outlet", "Inlet"} <= temp_locs
+    assert {"Body", "Outlet"} <= temp_locs
 
 
 def test_flattened_samples_are_layer2_consumable():
