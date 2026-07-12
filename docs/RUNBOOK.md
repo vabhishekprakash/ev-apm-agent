@@ -168,6 +168,27 @@ DATA_DIR=path/to/your/export REPLAY_SPEED_MULTIPLIER=0   python replay/main.py |
 # means a column or status value doesn't match the contract above
 ```
 
+### 3½.1 Native OCPP-J logs (raw CMS WebSocket export)
+
+If instead of the flattened CSVs you have the **raw CMS log** — semicolon-
+delimited rows whose `message` column holds an OCPP-J frame
+(`idcms_logs;messageId;chargerId;message;messageType;messageTime`) — feed it
+directly; no manual flattening needed:
+
+```bash
+REPLAY_SPEED_MULTIPLIER=0 python replay/main.py \
+  --format raw-ocpp path/to/logs.csv | python detector/main.py
+```
+
+The adapter parses each frame, correlates StartTransaction with its result for
+the transaction id, flattens MeterValues sampled values (energy, voltage,
+current, power, state-of-charge, and body/outlet/inlet temperature), and
+**anonymizes at ingestion** — the charger id is SHA-256 hashed and the raw
+correlation ids and any customer card fields never leave the adapter. It emits
+the identical event stream the CSV path produces, so the detector and UI are
+unchanged. Frame and skip counts print to stderr. Inspect the normalized
+stream alone with `python detector/ocpp_log_adapter.py path/to/logs.csv`.
+
 ---
 
 ## 4. Verify correctness (automated)

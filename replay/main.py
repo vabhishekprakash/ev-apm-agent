@@ -8,7 +8,11 @@ Inter-event gaps are divided by REPLAY_SPEED_MULTIPLIER (1 = real time,
 possible).
 
 Usage:
-    python main.py            # reads $DATA_DIR (default ./data/raw)
+    python main.py                              # CSV exports from $DATA_DIR
+    python main.py --format raw-ocpp <file>     # native OCPP-J WebSocket log
+
+Both forms emit the identical time-ordered JSON event stream, so the detector
+and UI are unaffected by the input format.
 """
 
 import csv
@@ -92,7 +96,28 @@ def replay(events: list[dict]) -> None:
         print(json.dumps(event), flush=True)
 
 
+def load_raw_ocpp_events(file_path: str) -> list[dict]:
+    """Delegate to the OCPP-J log adapter (in detector/, stdlib-only). Kept
+    behind the --format flag so the default CSV path has no extra imports."""
+    detector_dir = Path(__file__).resolve().parent.parent / "detector"
+    sys.path.insert(0, str(detector_dir))
+    from ocpp_log_adapter import load_events as load_ocpp_events
+
+    return load_ocpp_events(file_path)
+
+
 if __name__ == "__main__":
-    all_events = load_events()
+    if "--format" in sys.argv:
+        i = sys.argv.index("--format")
+        fmt = sys.argv[i + 1] if i + 1 < len(sys.argv) else ""
+        if fmt != "raw-ocpp":
+            print(f"unknown --format {fmt!r}; expected 'raw-ocpp'", file=sys.stderr)
+            raise SystemExit(2)
+        if i + 2 >= len(sys.argv):
+            print("usage: python main.py --format raw-ocpp <file>", file=sys.stderr)
+            raise SystemExit(2)
+        all_events = load_raw_ocpp_events(sys.argv[i + 2])
+    else:
+        all_events = load_events()
     print(f"replaying {len(all_events)} events at {SPEED}x", file=sys.stderr)
     replay(all_events)
