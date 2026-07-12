@@ -1,4 +1,4 @@
-﻿# EV APM Agent
+﻿## EV APM Agent
 
 ![Live demo — the decision trace behind a self-recovery downgrade, on real fleet data](docs/assets/hook_selfrecovery.gif)
 
