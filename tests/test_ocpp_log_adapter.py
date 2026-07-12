@@ -10,6 +10,8 @@ present the parse test runs against it, otherwise against the committed
 audit-clean synthetic fixture that reproduces the same quirks.
 """
 
+import csv
+import hashlib
 import json
 import re
 from pathlib import Path
@@ -152,3 +154,61 @@ def test_non_modeled_frames_skipped_gracefully():
     """Heartbeat and CALLRESULT acks are skipped, not emitted or crashed on."""
     events = adapter.load_events(SAMPLE)
     assert all(e["event_type"] in MODELED for e in events)
+
+
+def test_connector_identity_reconciles_across_paths():
+    """A charger already in the committed CSV inventory must resolve, from the
+    raw OCPP-J path, to the SAME connector identity (native connector_pk AND
+    hashed_charge_box_id) the CSV path uses — otherwise the raw-log path would
+    mint connectors Layer 2 can't match to their existing baselines.
+
+    The raw path derives the charge-box hash by plain sha256, exactly the
+    committed-data recipe, so the hash the real charger id produces is the
+    committed `hashed_charge_box_id`. Given that hash and the connector/plug
+    number, connector_key must return the CSV path's native connector_pk.
+    """
+    # the hashing recipe is the committed-data convention (plain lowercase sha256)
+    assert adapter.hash_charge_box_id("abc") == hashlib.sha256(b"abc").hexdigest()
+
+    inv_path = ROOT / "data" / "reference" / "charger_stations.csv"
+    with open(inv_path, newline="", encoding="utf-8-sig") as f:
+        row = next(r for r in csv.DictReader(f)
+                   if r.get("hashed_charge_box_id") and r.get("physical_plug_id") not in (None, ""))
+    committed_hash = row["hashed_charge_box_id"]      # what the raw path computes
+    plug = int(row["physical_plug_id"])                # OCPP connectorId
+    native_pk = int(row["connector_pk"])               # CSV-path connector identity
+    inventory = adapter.load_inventory()
+
+    # raw path == CSV path
+    assert adapter.connector_key(committed_hash, plug, inventory) == native_pk
+    # and without reconciliation the two paths WOULD diverge (regression guard)
+    assert adapter.connector_key(committed_hash, plug, inventory=None) != native_pk
+
+
+def test_raw_frame_end_to_end_lands_on_native_pk(tmp_path):
+    """End-to-end: a raw OCPP-J frame whose charger is in the (here, test)
+    inventory ingests to the native connector_pk and committed-style hash —
+    the same identity the CSV inventory row carries."""
+    charger = "SYNTHUNIT-01"
+    charger_hash = hashlib.sha256(charger.encode()).hexdigest()
+    native_pk = 8675309
+    (tmp_path / "charger_stations.csv").write_text(
+        "connector_pk,physical_plug_id,hashed_charge_box_id\n"
+        f"{native_pk},1,{charger_hash}\n", encoding="utf-8")
+    log = tmp_path / "raw.csv"
+    log.write_text(
+        f'1;m-1;{charger};"[2,""u-1"",""StatusNotification"",'
+        f'{{""connectorId"":1,""errorCode"":""NoError"",""status"":""Available"",'
+        f'""timestamp"":""2026-06-01T10:00:00+00:00""}}]";StatusNotification;'
+        f'2026-06-01 10:00:00\n', encoding="utf-8")
+    event = adapter.load_events(log, inventory_dir=tmp_path)[0]
+    assert event["connector_pk"] == native_pk
+    assert event["hashed_charge_box_id"] == charger_hash
+
+
+def test_header_row_and_ampm_timestamp_tolerated():
+    """Real-file specifics: a column-name header row is skipped, and a 12-hour
+    AM/PM messageTime parses."""
+    header = '"idcms_logs"; "messageId"; "chargerId"; "message"; "messageType"; "messageTime"'
+    assert adapter._is_header(header)
+    assert adapter._parse_ts("2026-07-12 03:04:39 PM") is not None

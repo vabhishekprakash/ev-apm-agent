@@ -54,16 +54,68 @@ _TAIL = re.compile(r"^(?P<frame>.*);(?P<mtype>[^;]*);(?P<mtime>[^;]*)$", re.DOTA
 _FRAME_HEAD = re.compile(r"\[\s*[234]\s*,")
 
 
+# Committed reference inventory — the same files the detector loads. A charger
+# already known to the fleet must reuse its NATIVE connector_pk so the raw-log
+# path lands on the same identity (and the same Layer 2 baseline, and the same
+# station/plug enrichment) as the CSV path, rather than a fresh synthetic key.
+DEFAULT_INVENTORY_DIR = Path(__file__).resolve().parent.parent / "data" / "reference"
+_INVENTORY_FILES = ("charger_stations.csv", "fault_segment_stations.csv")
+_inventory_cache: dict | None = None
+
+
 def hash_charge_box_id(charger_id: str) -> str:
     """SHA-256 hex of a raw charger identifier — the committed-data convention
-    (64-char hex). One-way: the raw id cannot be recovered from the hash."""
+    (plain lowercase sha256 of the utf-8 id, 64-char hex; verified to reproduce
+    the committed `hashed_charge_box_id` values). One-way."""
     return hashlib.sha256(str(charger_id).strip().encode("utf-8")).hexdigest()
 
 
-def connector_key(charger_hash: str, connector_id) -> int:
-    """Stable, anonymized integer key for one physical connector, derived from
-    the charger hash and the OCPP connectorId. Opaque by construction — it
-    reveals nothing about the raw charger id."""
+def load_inventory(inventory_dir=None) -> dict:
+    """{(hashed_charge_box_id, physical_plug_id) -> native connector_pk} from
+    the committed reference CSVs. OCPP connectorId maps directly to
+    physical_plug_id in this fleet's inventory."""
+    directory = Path(inventory_dir) if inventory_dir else DEFAULT_INVENTORY_DIR
+    inventory: dict = {}
+    for name in _INVENTORY_FILES:
+        path = directory / name
+        if not path.exists():
+            continue
+        with open(path, newline="", encoding="utf-8-sig") as handle:
+            for row in csv.DictReader(handle):
+                box_hash = (row.get("hashed_charge_box_id") or "").strip()
+                plug = row.get("physical_plug_id")
+                native = row.get("connector_pk")
+                if not (box_hash and plug not in (None, "") and native):
+                    continue
+                try:
+                    inventory[(box_hash, int(plug))] = int(native)
+                except ValueError:
+                    continue
+    return inventory
+
+
+def _get_inventory(inventory_dir=None) -> dict:
+    global _inventory_cache
+    if inventory_dir is not None:
+        return load_inventory(inventory_dir)
+    if _inventory_cache is None:
+        _inventory_cache = load_inventory()
+    return _inventory_cache
+
+
+def connector_key(charger_hash: str, connector_id, inventory=None) -> int:
+    """Integer key for one physical connector. When the charger is already in
+    the committed reference inventory, reuse its NATIVE connector_pk so both
+    ingestion paths produce the same connector identity; otherwise derive a
+    stable, anonymized synthetic key (opaque — reveals nothing about the raw
+    charger id)."""
+    if inventory:
+        try:
+            native = inventory.get((charger_hash, int(connector_id)))
+        except (TypeError, ValueError):
+            native = None
+        if native is not None:
+            return native
     digest = hashlib.sha256(f"{charger_hash}:{connector_id}".encode("utf-8"))
     return int(digest.hexdigest()[:12], 16)
 
@@ -121,7 +173,20 @@ def _parse_ts(raw) -> datetime | None:
     try:
         return datetime.fromisoformat(text)
     except ValueError:
+        pass
+    # real logs carry a 12-hour "YYYY-MM-DD HH:MM:SS AM/PM" messageTime
+    from datetime import datetime as _dt
+    try:
+        return _dt.strptime(text, "%Y-%m-%d %I:%M:%S %p")
+    except ValueError:
         return None
+
+
+def _is_header(line: str) -> bool:
+    """The real CMS export leads with a column-name row; skip it (a frame line
+    always carries an OCPP-J array, a header never does)."""
+    low = line.lower()
+    return "chargerid" in low and "messageid" in low and "[" not in line
 
 
 def _sample_location(sampled: dict):
@@ -156,19 +221,24 @@ def flatten_meter_values(payload: dict, ts: datetime | None) -> tuple[float, lis
     return meter_reading_wh, rows
 
 
-def load_events(path) -> list[dict]:
+def load_events(path, inventory_dir=None) -> list[dict]:
     """Parse a raw OCPP-J log file into the time-ordered event-record list the
     replay harness emits (same dict shape; `ts` is a datetime). Correlates
-    StartTransaction CALL→CALLRESULT for the transaction id and anonymizes
-    every identifier at the boundary. Prints frame/skip counts to stderr."""
+    StartTransaction CALL→CALLRESULT for the transaction id, reconciles each
+    connector against the committed inventory so known chargers reuse their
+    native connector_pk, and anonymizes every identifier at the boundary.
+    Prints frame/skip counts to stderr."""
     counts: Counter = Counter()
     events: list[dict] = []
+    inventory = _get_inventory(inventory_dir)
     # correlation state
     pending_start: dict[str, dict] = {}   # uuid -> start context (pre-result)
     txn_connector: dict[int, int] = {}    # transaction id -> connector key
 
     with open(path, newline="", encoding="utf-8-sig") as handle:
-        for line in handle:
+        for lineno, line in enumerate(handle):
+            if lineno == 0 and _is_header(line):
+                continue
             parsed = parse_line(line)
             if parsed is None:
                 if line.strip():
@@ -185,7 +255,7 @@ def load_events(path) -> list[dict]:
                 payload = frame[3] if len(frame) > 3 and isinstance(frame[3], dict) else {}
                 uuid = frame[1] if len(frame) > 1 else None
                 _handle_call(action, payload, uuid, charger_hash, msg_ts,
-                             events, pending_start, txn_connector, counts)
+                             events, pending_start, txn_connector, counts, inventory)
             elif kind == 3:  # CALLRESULT — only StartTransaction results matter
                 uuid = frame[1] if len(frame) > 1 else None
                 result = frame[2] if len(frame) > 2 and isinstance(frame[2], dict) else {}
@@ -200,7 +270,7 @@ def load_events(path) -> list[dict]:
 
 
 def _handle_call(action, payload, uuid, charger_hash, msg_ts, events,
-                 pending_start, txn_connector, counts) -> None:
+                 pending_start, txn_connector, counts, inventory) -> None:
     if action == ACTION_HEARTBEAT:
         counts["skipped_heartbeat"] += 1
         return
@@ -217,7 +287,7 @@ def _handle_call(action, payload, uuid, charger_hash, msg_ts, events,
         events.append({
             "event_type": ACTION_STATUS,
             "ts": ts,
-            "connector_pk": connector_key(charger_hash, connector_id),
+            "connector_pk": connector_key(charger_hash, connector_id, inventory),
             "hashed_charge_box_id": charger_hash,
             "status": payload.get("status"),
             "error_code": payload.get("errorCode") or "NoError",
@@ -228,7 +298,7 @@ def _handle_call(action, payload, uuid, charger_hash, msg_ts, events,
 
     elif action == ACTION_METER:
         connector_id = payload.get("connectorId", 0)
-        conn_pk = connector_key(charger_hash, connector_id)
+        conn_pk = connector_key(charger_hash, connector_id, inventory)
         ts = msg_ts
         meter_reading_wh, sampled = flatten_meter_values(payload, ts)
         first_ts = None
@@ -263,7 +333,7 @@ def _handle_call(action, payload, uuid, charger_hash, msg_ts, events,
             counts["skipped_start_uncorrelated"] += 1
             return
         pending_start[uuid] = {
-            "connector_pk": connector_key(charger_hash, connector_id),
+            "connector_pk": connector_key(charger_hash, connector_id, inventory),
             "hashed_charge_box_id": charger_hash,
             "ts": ts,
         }
