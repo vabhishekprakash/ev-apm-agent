@@ -28,7 +28,13 @@ SPEED = float(os.environ.get("REPLAY_SPEED_MULTIPLIER", "1"))
 # When DATA_DIR has no replay sources (e.g. a fresh public clone where the real
 # exports under data/raw are gitignored), fall back to the bundled demo fixture
 # so `docker compose up` shows a populated dashboard with no second terminal.
-DEMO_FALLBACK = Path(__file__).resolve().parent.parent / "tests" / "fixtures" / "demo_replay"
+# Candidate locations cover both the local layout (repo/tests/fixtures) and the
+# container layout (replay code at /app, fixtures mounted at /app/tests/fixtures).
+_FALLBACK_CANDIDATES = [
+    Path(__file__).resolve().parent.parent / "tests" / "fixtures" / "demo_replay",
+    Path("/app/tests/fixtures/demo_replay"),
+    Path("tests/fixtures/demo_replay"),
+]
 
 # filename -> (event_type, timestamp column)
 SOURCES = {
@@ -39,15 +45,20 @@ SOURCES = {
 }
 
 
+def _has_sources(directory: Path) -> bool:
+    known = list(SOURCES) + ["transaction.csv"]
+    return any((directory / name).exists() for name in known)
+
+
 def _effective_data_dir() -> Path:
     """DATA_DIR if it holds any replay source, else the bundled demo fixture."""
-    known = list(SOURCES) + ["transaction.csv"]
-    if any((DATA_DIR / name).exists() for name in known):
+    if _has_sources(DATA_DIR):
         return DATA_DIR
-    if DATA_DIR != DEMO_FALLBACK and any((DEMO_FALLBACK / name).exists() for name in known):
-        print(f"note: no replay sources under {DATA_DIR}; using bundled demo "
-              f"fixture {DEMO_FALLBACK.name} (set DATA_DIR to override)", file=sys.stderr)
-        return DEMO_FALLBACK
+    for candidate in _FALLBACK_CANDIDATES:
+        if candidate != DATA_DIR and _has_sources(candidate):
+            print(f"note: no replay sources under {DATA_DIR}; using bundled demo "
+                  f"fixture {candidate} (set DATA_DIR to override)", file=sys.stderr)
+            return candidate
     return DATA_DIR
 
 
