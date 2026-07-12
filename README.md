@@ -23,8 +23,8 @@ We'll prove it on real data from 39 stations across 5+ vendors, deployed as a dr
 | Name | Role |
 |------|------|
 | Abhishek | Layer 1 + integration |
-| Akhil | Layer 2 + data audit |
-| Hrishikesh | Testing + documentation |
+| Abhishek & Akhil | Layer 2 + data audit |
+| Abhishek & Hrishikesh | Testing + documentation |
 
 ## Project Structure
 
