@@ -61,7 +61,7 @@ We'll prove it on real data from 39 stations across 5+ vendors, deployed as a dr
 
 ![Architecture v2](docs/architecture_v2.svg)
 
-Two-layer detection: **Layer 1** — deterministic fault-sequence state
+Two-layer detection: **Layer 1** — deterministic fault-sequence state of the machine
 machines (err1051), point-event category detectors (err1024, WeakSignal,
 GroundFailure, Under/OverVoltage) and a telemetry-silence detector, fed
 through a vendor-code normalizer; **Layer 2** — per-connector Isolation
