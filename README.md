@@ -93,7 +93,7 @@ python -m pytest tests/    # 79 tests (76 on a fresh clone)
 
 Full step-by-step run + manual-test instructions: [`docs/RUNBOOK.md`](docs/RUNBOOK.md).
 
-Headline metric: **3.62% false-positive rate** on a chronological held-out
+Headline metric: **3.62% false-positive rate** on a chronological held-out in
 split (notebook 04); alert thresholds documented in `.env.example`.
 
 ## Attribution
