@@ -10,7 +10,7 @@ It does two things: a fast rules-based catcher for known fault patterns, and a l
 
 It also sorts alerts — separating noisy self-recovering blips from real problems that need a technician — so operators stop drowning in noise.
 
-We'll prove it on real data from 39 stations across 5+ vendors, deployed as a drop-in container next to an existing charging management system.
+We'll prove it on real data from a production CMS — **655 chargers across ~131 manufacturer families** at source, validated on a delivered **39-station / 80-connector** slice — deployed as a drop-in container next to an existing charging management system.
 
 ## What this is (and isn't)
 

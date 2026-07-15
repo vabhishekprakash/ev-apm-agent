@@ -74,17 +74,21 @@ needs a human."
 ## Slide 6 — Proof *(Technical Excellence / Scalability)*
 **Visuals:** `docs/assets/fpr_chart.png` + `docs/assets/category_coverage.png`
 **Bullets**
-- Fleet: **39 stations, 80 connectors, 12 vendor brands, 19 firmware
-  versions**; 10,090 delivered normal sessions modeled (23,084 audited at
-  source).
-- Taxonomy: **19 OCPP categories, 17,857 vendor codes — 100% resolve to a
-  labeled category** (PII-scrubbed, committed).
+- Source scale (production CMS, `data/reference/` evidence CSVs):
+  **655 chargers / 131 manufacturer families / 209 models, 33.5M events,
+  103,081 sessions.**
+- Delivered / validated slice: **39 stations, 80 connectors, 19 firmware
+  versions, 10,090 normal sessions modeled.**
+- Taxonomy: **19 OCPP categories; 659 delivered canonical vendor codes —
+  100% resolve** (PII-scrubbed, committed). Source scale: 20,202 distinct
+  vendor strings, 1.74M occurrences (`source_vendor_code_counts.csv`).
 - **FPR 3.62%** on a chronological held-out split (n=2,015).
-- **6 of 19 categories detected; 5 real-event verified at 100% detection**
-  on 80k+ real events (err1024 99/99; GroundFailure 79,480/79,480;
-  WeakSignal 150/150; Under/OverVoltage 688/688; telemetry-silence) —
-  err1051's machine fixture-verified with real sequence-shape + recovery
-  validation.
+- **6 of 19 categories detected; all six real-event verified at 100%
+  detection** on 80k+ real events (err1024 99/99; GroundFailure
+  79,480/79,480; WeakSignal 150/150; Under/OverVoltage 688/688;
+  telemetry-silence) — err1051's machine real-verified end-to-end on 88 real
+  status-spine sequences plus a connector-month with transaction linkage
+  (flags 25/27); only its meter-zero step remains fixture-only.
 
 **Speaker notes:** "The numbers we'll defend: three-point-six-two percent
 false positives on a chronological holdout — measured the way production
@@ -116,7 +120,8 @@ OCPP categories."
 1. Numbers come ONLY from `data_audit_final.md` flags 14–23; if a slide and
    the audit disagree, the audit wins.
 2. Never say: predictive maintenance, battery health, precision/recall,
-   "trained on 2.77M faults", or any temperature claim.
+   "trained on the 33.5M source events" (we modeled the 10,090 delivered
+   sessions), or any temperature claim.
 3. Say "resolves to labeled categories", not "routed by rules".
 4. err1051: "sequence-shape and recovery validated on 190 real events; full
    machine fixture-verified pending a combined export window."

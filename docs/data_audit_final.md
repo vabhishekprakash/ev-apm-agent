@@ -198,8 +198,9 @@ path) — encoded as a Layer 1 sub-detector.
     branches of its either/or).
 22. **Taxonomy + fault-event exports delivered and committed (2026-07-06):**
     `data/reference/error_taxonomy.csv` (17,954 rows, 19 OCPP categories,
-    17,857 distinct vendor codes — one embedded RFID idTag value redacted
-    before commit per governance) and
+    **659 distinct canonical vendor codes** — one embedded card-tag value
+    redacted before commit per governance; the source-scale count is 20,202,
+    see flag 28) and
     `data/reference/missing_real_faults.csv` (79,681 rows after dropping one
     truncated trailing line; GroundFailure 79,480 / WeakSignal 150 /
     OverVoltage 51 across 113 connectors in a separate pk namespace, no
@@ -301,3 +302,28 @@ path) — encoded as a Layer 1 sub-detector.
     `error_code` holds non-OCPP strings on some rows ("Available after
     Finishing Status", "Transaction Stopped") — harmless free text to the
     parser, but do not treat them as OCPP categories.
+
+28. **Source-scale evidence committed; two-tier framing established
+    (2026-07-14).** Four aggregate-count CSVs (public brand names + counts,
+    no IDs/PII) pin the size of the originating production CMS so pitch
+    numbers separate SOURCE SCALE from the DELIVERED/VALIDATED slice:
+    - `data/reference/manufacturer_inventory.csv` — **655 chargers across 131
+      manufacturer families and 209 manufacturer-model configurations** (plus
+      a NULL-manufacturer group of 132 chargers). Committed as an audit-safe
+      manufacturer-level aggregate: the raw per-model source file carried
+      un-aliased operator-name strings (owner clearance revoked; mapped to the
+      `VENDOR-P*` alias family) and product model names carrying a card-reader
+      token, both of which trip the anonymization audit; the raw per-model file
+      is not committed.
+    - `source_vendor_code_counts.csv` — **20,202 distinct vendor error codes,
+      1,744,075 logged occurrences.** (Supersedes flag 16's "~17.5k per the
+      Week 2 spec" estimate and flag 22's stale "17,857"; the delivered
+      working taxonomy carries 659 canonical codes at 100% resolution.)
+    - `source_event_totals.csv` — **33,508,275 total events (3,434,764 status
+      + 30,073,511 telemetry).** (Supersedes the "2.77M" spec estimate.)
+    - `source_session_count.csv` — **103,081 total sessions** (the delivered
+      slice validated on is 10,090 — flag 7; retires the "23,084" figure).
+    Reconciliation is documented in `docs/claims_evidence.md`. Note: earlier
+    circulated prose cited slightly lower figures (~119 families, 19,986
+    codes, 33.2M events, 102,264 sessions); the committed CSV values above are
+    authoritative and are what all deliverables now use.
