@@ -35,8 +35,10 @@ stream in production.
 Two detection layers with complementary failure modes:
 
 - **Layer 1 — deterministic.** State machines and point-event detectors for
-  known fault signatures, fed through a vendor-code normalizer that collapses
-  ~17.9k vendor-specific error strings onto the 19 OCPP-standard categories.
+  known fault signatures, fed through a vendor-code normalizer that resolves
+  the delivered taxonomy's 659 canonical vendor codes onto the 19 OCPP-standard
+  categories (the source CMS logs 20,202 distinct vendor strings —
+  `data/reference/source_vendor_code_counts.csv`).
   Deterministic detection is precise, explainable, and needs no training data
   — the right tool for faults whose signatures are documented.
 - **Layer 2 — unsupervised drift.** A per-connector Isolation Forest scores
@@ -88,14 +90,22 @@ customer/RFID/IP fields are dropped at export. A committed audit script
 delivered taxonomy before commit** — 16,260 card-tag values, 3,807
 subscriber-phone rows, and 950 routable IPs, all masked (audit flag 22).
 
-Fleet observed: **39 stations, 80 connectors, 12 vendor brands, 19 firmware
-versions.** Modeling uses the **10,090 delivered normal sessions** (23,084
-were audited at source; the balance was never re-exported — flag 7).
+**Two-tier fleet framing.** *Source scale* (the production CMS, evidenced by
+aggregate-count CSVs under `data/reference/`, not reproducible from the
+delivered slice): **655 chargers across 131 manufacturer families and 209
+manufacturer-model configurations, 33.5M events (3.4M status + 30.1M
+telemetry), and 103,081 sessions** (`manufacturer_inventory.csv`,
+`source_event_totals.csv`, `source_session_count.csv`). *Delivered / validated
+slice* (what the system was built and measured on): **39 stations, 80
+connectors, 19 firmware versions, and 10,090 normal sessions**
+(`total_stations.csv`, `charger_stations.csv`, `normal_sessions.csv`).
 
 Real fault data arrived late and in pieces, each analyzed and documented:
 
-- `error_taxonomy.csv` — 17,954 rows, 19 OCPP categories, 17,857 distinct
-  vendor codes (flag 22).
+- `error_taxonomy.csv` — 17,954 rows, 19 OCPP categories, **659 distinct
+  canonical vendor codes** (the delivered working taxonomy). The source CMS
+  logs 20,202 distinct vendor strings over 1.74M occurrences
+  (`source_vendor_code_counts.csv`); the delivered 659 resolve 100% (flag 22).
 - `missing_real_faults.csv` — 79,681 real fault events: GroundFailure 79,480,
   WeakSignal 150, OverVoltage 51 (flag 22).
 - `err1024_err1051_status_sequences.csv` — 21,910 rows of real err-code
@@ -156,10 +166,10 @@ orthogonal degradation tracking rather than early warning (flag 17).
   light 3.2% / pooled 6.1%; `siemens` family 10.5% (n=76) on the watch list
   (flag 14). This is the headline defensible number — comfortably under the
   5% acceptance bar.
-- **Vendor-code coverage: 100% of 17,857 distinct codes resolve to a labeled
-  OCPP category**, 0% unlabeled residue. Framed honestly: 0.9% are decided by
-  shape rules and the rest via the already-labeled `error_code` field —
-  "resolves to a labeled category", never "routed by rules" (flag 22).
+- **Vendor-code coverage: 100% of the 659 delivered canonical codes resolve to
+  a labeled OCPP category**, 0% unlabeled residue. Framed honestly: shape rules
+  decide a minority (152 of 659) and the already-labeled `error_code` field the
+  rest — "resolves to a labeled category", never "routed by rules" (flag 22).
 - **Real-event detection: 100% per category** — err1024 99/99, GroundFailure
   79,480/79,480, WeakSignal 150/150, OverVoltage 51/51, UnderVoltage 637/637
   (plus 18/18 on the capped export). **All six categories are real-event

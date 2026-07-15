@@ -43,13 +43,15 @@ Every number below passed the honesty audit (bottom of file).
   escalate automatically.
 
 ## 6. Proof *(Technical Excellence / Scalability)*
-- Fleet observed: **39 stations, 80 connectors, 12 vendor brands, 19
-  firmware versions.**
-- **10,090 delivered normal sessions** modeled (23,084 audited at source;
-  balance pending re-export).
-- Error taxonomy delivered and committed: **19 OCPP-standard categories,
-  17,857 distinct vendor codes — 100% resolve to a labeled category**
-  (0% unlabeled residue; PII-scrubbed before commit).
+- **Source scale** (production CMS — `data/reference/` evidence CSVs):
+  **655 chargers across 131 manufacturer families / 209 models, 33.5M events
+  (3.4M status + 30.1M telemetry), 103,081 sessions.**
+- **Delivered / validated slice** (what we built and measured on):
+  **39 stations, 80 connectors, 19 firmware versions, 10,090 normal sessions.**
+- Error taxonomy delivered and committed: **19 OCPP-standard categories;
+  659 delivered canonical vendor codes at 100% resolution** (0% unlabeled
+  residue; PII-scrubbed). Source CMS logs **20,202 distinct vendor strings
+  over 1.74M occurrences** (`source_vendor_code_counts.csv`).
 - **Headline metric: 3.62% false-positive rate** on a chronological held-out
   split (n = 2,015), per-tier breakdown available.
 - **6 of 19 categories detected — ALL SIX real-event verified at 100%
@@ -84,11 +86,11 @@ Every number below passed the honesty audit (bottom of file).
 | No "predictive maintenance" headline | Absent. Drift panel is "degradation tracking". **Day 5 verdict: the lead-time analysis came back negative (lift 0.57× — docs/layer2_leadtime.md); the pitch line is "orthogonal degradation tracking", permanently, unless richer features change the result.** |
 | No per-category precision/recall | None claimed anywhere — no held-out fault set exists. FPR is the only quantitative claim. |
 | FPR 3.62% | Measured, chronological holdout, notebook 04, n=2,015. Deployed threshold −0.1187. Defensible by both presenters. |
-| "19 categories / 17,857 vendor codes / 100% resolved" | Taxonomy delivered 2026-07-06, PII-scrubbed, committed as data/reference/error_taxonomy.csv; coverage measured (0.9% shape-rules + labeled-field fallback — framed as "resolves", never "routed by rules"). |
+| "19 categories / 659 delivered vendor codes / 100% resolved" | Taxonomy delivered 2026-07-06, PII-scrubbed, committed as data/reference/error_taxonomy.csv (659 canonical codes); coverage measured (shape-rules 152/659 + labeled-field fallback — framed as "resolves", never "routed by rules"). Source scale (20,202 distinct strings, 1.74M occurrences) is source_vendor_code_counts.csv, labeled SOURCE-SCALE. |
 | "6 of 19 categories, ALL real-verified" | 100% detection per category on 80k+ real events; err1051 verified end-to-end on 88 real sequences via the status-evidence path (flag 25) — full-evidence corroboration noted honestly as pending a combined export. |
 | "80% of err1051 self-recovers ≤15 s (median 10 s)" | Measured on 190 real err1051 events (flag 23); the mixed-fault 42% (n=2,041, flag 12) is quoted alongside — both attributed. |
 | Temperature/asymmetry claims | **None** — temperature field is dead in real data (flag 11). |
-| 23,084 sessions | Stated as "audited at source"; modeling claims use the delivered 10,090 only. |
+| Sessions: 103,081 source / 10,090 delivered | Two-tier: 103,081 total sessions at source (source_session_count.csv, SOURCE-SCALE); modeling uses the delivered 10,090 (normal_sessions.csv). The old "23,084" figure is retired. |
 
 ## Assets (all delivered)
 

@@ -19,8 +19,11 @@ implementation was verified meanwhile.
   nominal while current/power collapse (flag 10) — relevant to future
   UnderVoltage guard design: a *supply* voltage fault will look different
   from these *load-side* faults.
-- **Taxonomy scale** (per Week 2 spec; Errornotify.csv delivery pending):
-  19 OCPP categories, 2.77M occurrences, ~17.5k vendor code strings.
+- **Taxonomy scale** (SOURCE-SCALE, evidenced by `data/reference/`
+  aggregate CSVs — see data_audit_final flag 28): 19 OCPP categories,
+  33.5M total events, 20,202 distinct vendor strings (1.74M vendor-error
+  occurrences). The delivered working taxonomy carries 659 canonical codes at
+  100% resolution.
 
 ## Implementation shipped (verified on fixture until the export lands)
 
