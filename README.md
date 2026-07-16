@@ -10,7 +10,7 @@ It does two things: a fast rules-based catcher for known fault patterns, and a l
 
 It also sorts alerts — separating noisy self-recovering blips from real problems that need a technician — so operators stop drowning in noise.
 
-We'll prove it on real data from a production CMS — **655 chargers across ~131 manufacturer families** at source, validated on a delivered **39-station / 80-connector** slice — deployed as a drop-in container next to an existing charging management system.
+We'll prove it on real data from a production CMS — **655 chargers across 130+ manufacturer families** at source, validated on a delivered **39-station / 80-connector** slice — deployed as a drop-in container next to an existing charging management system.
 
 ## What this is (and isn't)
 
@@ -22,8 +22,8 @@ We'll prove it on real data from a production CMS — **655 chargers across ~131
 
 | Name | Role |
 |------|------|
-| Abhishek | Layer 1 + integration |
-| Abhishek | Layer 2 + data audit |
+| Abhishek | Layer 1 + integration + UI |
+| Akhil | Layer 2 + data + evaluation |
 | Hrishikesh | Testing + documentation |
 
 ## Project Structure
@@ -61,7 +61,7 @@ We'll prove it on real data from a production CMS — **655 chargers across ~131
 
 ![Architecture v2](docs/architecture_v2.svg)
 
-Two-layer detection: **Layer 1** — deterministic fault-sequence state of the machine
+Two-layer detection: **Layer 1** — deterministic fault-sequence state
 machines (err1051), point-event category detectors (err1024, WeakSignal,
 GroundFailure, Under/OverVoltage) and a telemetry-silence detector, fed
 through a vendor-code normalizer; **Layer 2** — per-connector Isolation
@@ -88,12 +88,12 @@ Local pipeline without Docker:
 
 ```bash
 REPLAY_SPEED_MULTIPLIER=0 python replay/main.py | python detector/main.py
-python -m pytest tests/    # 79 tests (76 on a fresh clone)
+python -m pytest tests/    # 90 tests (87 on a fresh clone)
 ```
 
 Full step-by-step run + manual-test instructions: [`docs/RUNBOOK.md`](docs/RUNBOOK.md).
 
-Headline metric: **3.62% false-positive rate** on a chronological held-out in
+Headline metric: **3.62% false-positive rate** on a chronological held-out
 split (notebook 04); alert thresholds documented in `.env.example`.
 
 ## Attribution

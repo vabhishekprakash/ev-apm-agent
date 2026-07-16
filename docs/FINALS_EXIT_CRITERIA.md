@@ -49,6 +49,7 @@ Layer 1 is deterministic (state machines + point-event handlers + telemetry-sile
 
 **I2 — Vendor code normalization is implemented, not aspirational.**
 The rule-based normalizer routes ≥80% of the 17,553 vendor error strings to one of the 19 OCPP standard categories. Coverage is measured, logged, and pitched as a real capability.
+> **Status annotation (2026-07-16):** "17,553" is a stale spec-era estimate. Canonical figures (see `docs/claims_evidence.md`): **20,202 distinct vendor strings at source** (`data/reference/source_vendor_code_counts.csv`) and a **delivered working taxonomy of 659 canonical codes at 100% resolution** — the ≥80% bar is met on the delivered taxonomy, measured by `detector/vendor_code_normalizer.py --measure-coverage`.
 - Verified by: `detector/vendor_code_normalizer.py` exists with tests; coverage number ≥80% documented in `docs/category_metrics.md`.
 
 **I3 — The self-recovery signal drives a real decision, not a note.**
@@ -103,7 +104,7 @@ No claim of predictive lead time on labeled faults. No precision/recall on fault
 
 **S1 — Fleet coverage evidenced.**
 The 39 stations, 68 physical connectors, 5+ vendor families, and 19 firmware versions are called out in the deck, the demo, and the detailed document. Vendor diversity is not hypothetical.
-> **Status annotation (2026-07-14):** the committed inventory is authoritative — **80 connectors** (`charger_stations.csv`), not 68 (68 was the connectorId=0-excluded count). Vendor diversity is now evidenced at **source scale: 655 chargers / 131 manufacturer families / 209 models** (`data/reference/manufacturer_inventory.csv`), superseding "5+ vendor families". Use the two-tier framing in `docs/claims_evidence.md`.
+> **Status annotation (2026-07-14):** the committed inventory is authoritative — **80 connectors** (`charger_stations.csv`), not 68 (68 was the connectorId=0-excluded count). Vendor diversity is now evidenced at **source scale: 655 chargers / 130+ manufacturer families / 209 models** (`data/reference/manufacturer_inventory.csv`), superseding "5+ vendor families". Use the two-tier framing in `docs/claims_evidence.md`.
 - Verified by: numbers appear on deck slide 6, in demo narration between 2:20–3:00, and in detailed document §4.
 
 **S2 — Per-connector + pooled fallback is documented and tested.**
@@ -184,7 +185,7 @@ Both engineers walk this together on Week 3 Day 5. Both sign off.
 - [ ] No implied vendor partnerships or CMS-vendor deals
 - [ ] Layer 2 lead-time claim (if made) is backed by SG1 analysis with numbers
 - [ ] FPR number on every slide, video moment, and document paragraph is the same number
-- [ ] Fleet stats two-tier per docs/claims_evidence.md: delivered 39 stations / 80 connectors / 10,090 sessions / 19 firmware; source 655 chargers / 131 mfr families / 33.5M events / 103,081 sessions — consistent across deck, video, document
+- [ ] Fleet stats two-tier per docs/claims_evidence.md: delivered 39 stations / 80 connectors / 10,090 sessions / 19 firmware; source 655 chargers / 130+ mfr families / 33.5M events / 103,081 sessions — consistent across deck, video, document
 - [ ] "AI Maintenance Decision Support" framing consistent across all surfaces
 - [ ] Every capability shown in the demo exists in the repo
 - [ ] Every capability described in the document is demonstrable in the demo
@@ -361,7 +362,7 @@ Copy this checklist to a GitHub Issue titled `submission-day-checklist` and chec
 - [ ] T4 — ≥20 unit tests passing
 - [ ] T5 — Feature values physically plausible on 10 sessions
 - [ ] T6 — Honesty audit signed by both engineers
-- [ ] S1 — Fleet stats two-tier (delivered 39/80/10,090/19 + source 655/131/33.5M/103,081 per claims_evidence.md) in deck, demo, document
+- [ ] S1 — Fleet stats two-tier (delivered 39/80/10,090/19 + source 655/130+/33.5M/103,081 per claims_evidence.md) in deck, demo, document
 - [ ] S2 — Pooled fallback documented and tested
 - [ ] S3 — `docker compose up` cold start works on fresh machine
 - [ ] U1 — Maintenance priority visible in ≤3s of UI viewing

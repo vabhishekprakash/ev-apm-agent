@@ -46,10 +46,11 @@ sequences to look for."
 - Alert prioritizer between detection and every sink.
 
 **Speaker notes:** "Two layers. Layer one is deterministic — state machines
-and point detectors for known fault signatures, fed through a normalizer that
-collapses seventeen thousand vendor code variants onto the nineteen OCPP
-standard categories. Layer two learns each connector's normal and flags
-drift. Between detection and the dashboard sits the prioritizer — every
+and point detectors for known fault signatures, fed through a normalizer:
+the source CMS logs over twenty thousand distinct vendor code strings, and
+the delivered taxonomy's six hundred fifty-nine canonical codes all resolve
+onto the nineteen OCPP standard categories. Layer two learns each
+connector's normal and flags drift. Between detection and the dashboard sits the prioritizer — every
 alert leaves with a tier and the reason, in plain language."
 
 ## Slide 5 — Alert-fatigue solution *(Business Impact centerpiece)*
@@ -75,7 +76,7 @@ needs a human."
 **Visuals:** `docs/assets/fpr_chart.png` + `docs/assets/category_coverage.png`
 **Bullets**
 - Source scale (production CMS, `data/reference/` evidence CSVs):
-  **655 chargers / 131 manufacturer families / 209 models, 33.5M events,
+  **655 chargers / 130+ manufacturer families / 209 models, 33.5M events,
   103,081 sessions.**
 - Delivered / validated slice: **39 stations, 80 connectors, 19 firmware
   versions, 10,090 normal sessions modeled.**
@@ -93,9 +94,10 @@ needs a human."
 **Speaker notes:** "The numbers we'll defend: three-point-six-two percent
 false positives on a chronological holdout — measured the way production
 would experience it. One hundred percent detection on over eighty thousand
-real fault events across five categories. And the whole observed error
-taxonomy — seventeen thousand vendor code variants — resolves to labeled
-OCPP categories."
+real fault events, all six categories real-event verified. And every one of
+the six hundred fifty-nine vendor codes in the delivered taxonomy resolves
+to a labeled OCPP category — out of more than twenty thousand distinct
+vendor strings observed at source."
 
 ## Slide 7 — Demo *(UX)*
 **Visual:** live demo or the dry-run recording; fallback still of the feed.
@@ -123,5 +125,6 @@ OCPP categories."
    "trained on the 33.5M source events" (we modeled the 10,090 delivered
    sessions), or any temperature claim.
 3. Say "resolves to labeled categories", not "routed by rules".
-4. err1051: "sequence-shape and recovery validated on 190 real events; full
-   machine fixture-verified pending a combined export window."
+4. err1051: "real-verified end-to-end — 88/88 real status-spine sequences
+   plus 2/2 episodes of a connector-month with transaction linkage (flags
+   25/27); only the meter-zero corroborating step remains fixture-only."
