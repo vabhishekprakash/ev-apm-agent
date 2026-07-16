@@ -58,10 +58,20 @@ PY
 | Real fault events | GroundFailure **79,480**, WeakSignal **150**, OverVoltage **51**, UnderVoltage **637**, err1024 **99/99** | `data/reference/missing_real_faults.csv`; `data/raw/err1024_err1051_status_sequences.csv` |
 | Raw OCPP-J ingestion | demonstrated on real CMS log | `tests/test_ocpp_log_adapter.py` (11 tests); `data/raw/logs_sample.csv` (gitignored): 20/20 frames, unparsed=0 |
 
+## Narration guidance (spoken numbers)
+
+**Manufacturer count:** the committed 131 is the count of distinct
+`manufacturer` strings in `manufacturer_inventory.csv` and **includes
+spelling/series variants** (e.g. `ACS ENERGY` / `ACS-ENERGY` / `ACSENERGY`) —
+it is **not a true distinct-brand count**, and no committed grouping rule can
+produce one. The defensible spoken figure is **"130+ manufacturer families
+across 209 models"** — never a precise brand number. All pitch docs use the
+"130+" phrasing for this reason.
+
 ## How the two tiers map into the pitch
 
 - **Scalability** leads with SOURCE SCALE: "a production CMS spanning 655
-  chargers, 131 manufacturer families, 209 models, 33.5M events, 103k
+  chargers, 130+ manufacturer families, 209 models, 33.5M events, 103k
   sessions" — then narrows to the delivered slice the system was validated on
   (39 stations / 80 connectors / 10,090 sessions).
 - **Vendor-agnostic normalization**: "20,202 distinct vendor error strings at

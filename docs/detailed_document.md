@@ -92,7 +92,7 @@ subscriber-phone rows, and 950 routable IPs, all masked (audit flag 22).
 
 **Two-tier fleet framing.** *Source scale* (the production CMS, evidenced by
 aggregate-count CSVs under `data/reference/`, not reproducible from the
-delivered slice): **655 chargers across 131 manufacturer families and 209
+delivered slice): **655 chargers across 130+ manufacturer families and 209
 manufacturer-model configurations, 33.5M events (3.4M status + 30.1M
 telemetry), and 103,081 sessions** (`manufacturer_inventory.csv`,
 `source_event_totals.csv`, `source_session_count.csv`). *Delivered / validated

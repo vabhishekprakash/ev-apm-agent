@@ -44,7 +44,7 @@ Every number below passed the honesty audit (bottom of file).
 
 ## 6. Proof *(Technical Excellence / Scalability)*
 - **Source scale** (production CMS — `data/reference/` evidence CSVs):
-  **655 chargers across 131 manufacturer families / 209 models, 33.5M events
+  **655 chargers across 130+ manufacturer families / 209 models, 33.5M events
   (3.4M status + 30.1M telemetry), 103,081 sessions.**
 - **Delivered / validated slice** (what we built and measured on):
   **39 stations, 80 connectors, 19 firmware versions, 10,090 normal sessions.**

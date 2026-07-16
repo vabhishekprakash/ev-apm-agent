@@ -210,7 +210,7 @@ stream alone with `python detector/ocpp_log_adapter.py path/to/logs.csv`.
 ## 4. Verify correctness (automated)
 
 ```bash
-python -m pytest tests/ -q            # 79 tests, all pass (76 on a fresh clone)
+python -m pytest tests/ -q            # 90 tests, all pass (87 on a fresh clone)
 bash tests/anonymization_audit.sh     # data-governance gate → PASS
 bash scripts/run_all_tests.sh         # everything above in one shot
 ```
