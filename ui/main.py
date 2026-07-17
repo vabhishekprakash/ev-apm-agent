@@ -98,28 +98,41 @@ PAGE = """<!doctype html>
 <title>EV APM — Maintenance Decision Support</title>
 <style>
   :root {
-    --bg: #070b12; --panel: #0d1420; --panel-2: #101a2b; --line: #1b2740;
-    /* muted/faint lifted one step for projector + video legibility */
-    --text: #dce5f2; --muted: #7f8da6; --faint: #59677f;
-    --accent: #22d3ee; --p1: #f87171; --p2: #fbbf24; --p3: #8d9aae;
-    --ok: #34d399; --drift: #60a5fa;
+    /* Direction A — industrial control-room dark. One navy surface ramp,
+       one signature accent, signal colors calibrated for projector chroma
+       (owned values, not framework defaults). */
+    --bg: #05080f; --panel: #0b1220; --panel-2: #111a2c; --line: #1c2a44;
+    --rule: #16203a;            /* hairline row rules inside panels */
+    --hover: #131f36;
+    --text: #e2e9f4; --muted: #8b99b3;
+    --faint: #78869f;           /* 5.0:1 on --panel — was #59677f at 2.6:1 */
+    --accent: #3fe0c8; --accent-wash: #0a3b38;
+    --p1: #ff5c49; --p1-wash: #3a1310; --p1-edge: #7a2a20;
+    --p2: #ffb020; --p2-wash: #382a0c; --p2-edge: #77571a;
+    --p3: #93a1b7; --p3-wash: #17202f; --p3-edge: #2a3850;
+    --ok: #2fd48c; --drift: #5aa2ff;
+    /* 3-step radius scale (+ pill); was 6/8/10/12/999 mixed */
+    --r-sm: 6px; --r-md: 10px; --r-lg: 14px;
   }
   * { box-sizing: border-box; }
   body { font-family: "Segoe UI Variable Text", "Inter", system-ui, sans-serif;
          margin: 0; background: var(--bg); color: var(--text);
-         background-image: radial-gradient(1200px 400px at 70% -10%, #0e1a2e 0%, transparent 60%); }
+         background-image: radial-gradient(1200px 400px at 70% -10%, #0d1729 0%, transparent 60%); }
   b, .num { font-variant-numeric: tabular-nums; }
+  td.num { white-space: nowrap; }
 
   /* ── top bar ─────────────────────────────────────────── */
   #topbar { display: flex; align-items: center; gap: .8rem; padding: .65rem 1.2rem;
             border-bottom: 1px solid var(--line); position: sticky; top: 0; z-index: 5;
-            background: rgba(7,11,18,.92); backdrop-filter: blur(6px); }
+            background: rgba(5,8,15,.92); backdrop-filter: blur(6px); }
   #topbar > span, #topbar b { white-space: nowrap; }
   @media (max-width: 1560px) { #brand small { display: none; } }
-  #brand { display: flex; align-items: baseline; gap: .55rem; }
-  #brand b { font-size: 1.02rem; letter-spacing: .02em; white-space: nowrap; }
-  #brand b em { font-style: normal; color: var(--accent); }
-  #brand small { color: var(--muted); font-size: .74rem; }
+  #brand { display: flex; align-items: center; gap: .6rem; }
+  #brand svg { flex: none; display: block; }
+  #brand b { font-size: 1.05rem; font-weight: 650; letter-spacing: .01em;
+             white-space: nowrap; }
+  #brand b em { font-style: normal; color: var(--accent); letter-spacing: .05em; }
+  #brand small { color: var(--muted); font-size: .72rem; }
   #topbar .spacer { flex: 1; }
   #conn-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--faint);
               box-shadow: 0 0 6px var(--faint); }
@@ -133,21 +146,27 @@ PAGE = """<!doctype html>
   #evt-time small, #clock small { color: var(--faint); font-size: .62rem;
                                   letter-spacing: .06em; margin-right: .25rem; }
   #sort-toggle { background: var(--panel-2); color: var(--text); border: 1px solid var(--line);
-                 border-radius: 6px; padding: .28rem .7rem; cursor: pointer; font-size: .74rem; }
+                 border-radius: var(--r-sm); padding: .28rem .7rem; cursor: pointer; font-size: .75rem; }
   #sort-toggle:hover { border-color: var(--accent); }
 
-  main { padding: 1rem 1.2rem 2rem; max-width: 1620px; margin: 0 auto; }
+  main { padding: 1.2rem 1.2rem 2.4rem; max-width: 1620px; margin: 0 auto; }
 
-  /* ── KPI band ────────────────────────────────────────── */
+  /* ── KPI band — type scale steps .72 / .8 / .95 / 1.5 / 2.4rem;
+       the Active-P1 count is the loudest thing on the screen ── */
   #counters { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-              gap: .7rem; margin: .2rem 0 .9rem; }
+              gap: .8rem; margin: 0 0 1.2rem; align-items: stretch; }
   .counter { background: linear-gradient(180deg, var(--panel-2), var(--panel));
-             border: 1px solid var(--line); border-radius: 10px; padding: .6rem .85rem; }
-  .counter b { display: block; font-size: 1.45rem; line-height: 1.25; }
-  .counter span { color: var(--muted); font-size: .66rem; text-transform: uppercase;
+             border: 1px solid var(--line); border-radius: var(--r-md);
+             padding: .65rem .85rem; display: flex; flex-direction: column;
+             justify-content: flex-end; }
+  .counter b { display: block; font-size: 1.5rem; font-weight: 650; line-height: 1.15; }
+  .counter span { color: var(--muted); font-size: .72rem; text-transform: uppercase;
                   letter-spacing: .09em; }
-  .counter.p1 b { color: var(--p1); } .counter.p1 { border-color: #4a1d1d; }
-  .counter.p2 b { color: var(--p2); } .counter.p2 { border-color: #4a3a10; }
+  .counter.p1 { border-color: var(--p1-edge);
+                background: linear-gradient(180deg, #24100d, var(--panel)); }
+  .counter.p1 b { color: var(--p1); font-size: 2.4rem; }
+  .counter.p2 { border-color: var(--p2-edge); }
+  .counter.p2 b { color: var(--p2); font-size: 1.9rem; }
   .counter.accent b { color: var(--accent); }
   .counter svg { display: block; margin-top: .25rem; }
 
@@ -155,89 +174,97 @@ PAGE = """<!doctype html>
   #grid { display: grid; grid-template-columns: minmax(0, 2.2fr) minmax(280px, 1fr);
           gap: .8rem; align-items: start; }
   @media (max-width: 1000px) { #grid { grid-template-columns: minmax(0, 1fr); } }
-  .panel { background: var(--panel); border: 1px solid var(--line); border-radius: 12px;
-           overflow: hidden; }
+  .panel { background: var(--panel); border: 1px solid var(--line);
+           border-radius: var(--r-lg); overflow: hidden; }
   .panel-head { display: flex; align-items: center; gap: .6rem; padding: .55rem .9rem;
-                border-bottom: 1px solid var(--line); background: var(--panel-2); }
-  .panel-head h2 { font-size: .8rem; margin: 0; color: var(--text); font-weight: 600;
+                min-height: 2.5rem; border-bottom: 1px solid var(--line);
+                background: var(--panel-2); }
+  .panel-head h2 { font-size: .8rem; margin: 0; color: var(--text); font-weight: 650;
                    text-transform: uppercase; letter-spacing: .08em; }
-  .panel-head small { color: var(--muted); font-size: .7rem; font-weight: normal;
+  .panel-head small { color: var(--muted); font-size: .72rem; font-weight: normal;
                       text-transform: none; letter-spacing: 0; }
-  .panel-body { padding: .7rem .9rem; }
+  .panel-body { padding: .8rem .9rem; }
 
   /* ── alert feed ──────────────────────────────────────── */
   #feed-wrap { max-height: 60vh; overflow-y: auto; }
   table { border-collapse: collapse; width: 100%; font-size: .8rem; }
-  th, td { padding: .38rem .6rem; text-align: left; border-bottom: 1px solid #141e33; }
+  th, td { padding: .5rem .65rem; text-align: left; border-bottom: 1px solid var(--rule); }
   th { color: var(--muted); position: sticky; top: 0; background: var(--panel);
-       font-size: .66rem; text-transform: uppercase; letter-spacing: .07em; z-index: 2; }
+       font-size: .72rem; text-transform: uppercase; letter-spacing: .07em; z-index: 2; }
   tbody tr { border-left: 3px solid transparent; }
-  tbody tr:hover { background: #101a2e; }
+  tbody tr:hover { background: var(--hover); }
   tbody tr.t-P1 { border-left-color: var(--p1); }
   tbody tr.t-P2 { border-left-color: var(--p2); }
-  tbody tr.t-P3 { border-left-color: #4b586c; }
-  @keyframes p1pulse { from { background: #3d1414; } to { background: transparent; } }
+  tbody tr.t-P3 { border-left-color: #52627e; }
+  @keyframes p1pulse { from { background: var(--p1-wash); } to { background: transparent; } }
   tbody tr.flash { animation: p1pulse 1.6s ease-out 1; }
   tbody tr.alert-row { cursor: pointer; }
-  tbody tr.open { background: #101a2e; }
-  tr.trace-row td { background: #0b1322; border-left: 3px solid var(--accent);
+  tbody tr.open { background: var(--hover); }
+  tr.trace-row td { background: #0a1120; border-left: 3px solid var(--accent);
                     padding: .65rem 1rem .75rem; cursor: default; }
-  .trace-title { color: var(--accent); font-size: .68rem; font-weight: 700;
+  .trace-title { color: var(--accent); font-size: .72rem; font-weight: 700;
                  text-transform: uppercase; letter-spacing: .09em; margin-bottom: .45rem; }
   .trace { display: grid; grid-template-columns: max-content 1fr; gap: .3rem .8rem;
-           font-size: .78rem; }
-  .trace dt { color: var(--muted); font-size: .66rem; text-transform: uppercase;
-              letter-spacing: .07em; padding-top: .1rem; white-space: nowrap; }
-  .trace dd { margin: 0; color: #c6d2e2; line-height: 1.45; }
+           font-size: .8rem; }
+  .trace dt { color: var(--muted); font-size: .72rem; text-transform: uppercase;
+              letter-spacing: .07em; padding-top: .05rem; white-space: nowrap; }
+  .trace dd { margin: 0; color: #ccd7e6; line-height: 1.45; }
   .trace dd b { color: var(--text); }
-  .trace dd.conclusion { color: #9fb0c8; font-style: italic; }
-  .trace-foot { color: var(--faint); font-size: .66rem; margin-top: .5rem; }
+  .trace dd.conclusion { color: #a5b3c9; font-style: italic; }
+  .trace-foot { color: var(--faint); font-size: .72rem; margin-top: .5rem; }
   .badge { display: inline-block; padding: .08rem .55rem; border-radius: 999px;
            font-weight: 700; font-size: .72rem; letter-spacing: .03em; }
-  .badge.P1 { background: #3d1414; color: var(--p1); border: 1px solid #6b2020; }
-  .badge.P2 { background: #3d3010; color: var(--p2); border: 1px solid #6b5518; }
-  .badge.P3 { background: #1a2334; color: var(--p3); border: 1px solid #263349; }
-  td.signal { color: #9fb0c8; font-style: italic; max-width: 280px;
+  .badge.P1 { background: var(--p1-wash); color: var(--p1); border: 1px solid var(--p1-edge); }
+  .badge.P2 { background: var(--p2-wash); color: var(--p2); border: 1px solid var(--p2-edge); }
+  .badge.P3 { background: var(--p3-wash); color: var(--p3); border: 1px solid var(--p3-edge); }
+  td.signal { color: #a5b3c9; font-style: italic; max-width: 280px;
               white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  td.action { font-weight: 600; color: #eaf1fa; font-size: .82rem; }
-  .stn { display: block; font-family: ui-monospace, monospace; color: #5a6a84;
-         font-size: .66rem; margin-top: .12rem; }
+  td.action { font-weight: 650; color: #eef4fb; font-size: .85rem; }
+  .stn { display: block; font-family: ui-monospace, monospace; color: var(--faint);
+         font-size: .72rem; margin-top: .12rem; }
   .imp { display: inline-block; padding: .08rem .5rem; border-radius: 999px;
-         font-size: .7rem; font-weight: 600; border: 1px solid; white-space: nowrap; }
-  .imp.safety { background: #3d1414; color: var(--p1); border-color: #6b2020; }
-  .imp.revenue { background: #3d3010; color: var(--p2); border-color: #6b5518; }
-  .imp.transient { background: #161e2e; color: var(--p3); border-color: #263349; }
+         font-size: .72rem; font-weight: 600; border: 1px solid; white-space: nowrap; }
+  .imp.safety { background: var(--p1-wash); color: var(--p1); border-color: var(--p1-edge); }
+  .imp.revenue { background: var(--p2-wash); color: var(--p2); border-color: var(--p2-edge); }
+  .imp.transient { background: var(--p3-wash); color: var(--p3); border-color: var(--p3-edge); }
 
-  /* ── coverage chips ──────────────────────────────────── */
-  #coverage { display: flex; gap: .4rem; flex-wrap: wrap; }
-  #coverage .headline { color: var(--muted); font-size: .72rem; width: 100%; margin-bottom: .2rem; }
+  /* ── coverage: fraction bar + seen row + not-yet-observed row ── */
+  #coverage .headline { display: flex; align-items: center; gap: .6rem;
+                        color: var(--muted); font-size: .72rem; margin-bottom: .5rem; }
+  .cov-bar { flex: 1; height: 5px; min-width: 60px; background: var(--rule);
+             border-radius: 999px; overflow: hidden; }
+  .cov-bar i { display: block; height: 100%; background: var(--accent); }
+  .cov-row { display: flex; gap: .4rem; flex-wrap: wrap; }
+  .cov-unseen-label { color: var(--faint); font-size: .72rem;
+                      margin: .6rem 0 .3rem; text-transform: uppercase;
+                      letter-spacing: .07em; }
   .chip { background: var(--panel-2); border: 1px solid var(--line); border-radius: 999px;
-          padding: .18rem .65rem; font-size: .73rem; color: #a9b7cb; cursor: pointer;
+          padding: .18rem .65rem; font-size: .75rem; color: #aebcd1; cursor: pointer;
           transition: border-color .15s; }
   .chip:hover { border-color: var(--accent); }
   .chip b { color: var(--text); }
-  .chip.p1 { border-color: #6b2020; } .chip.p2 { border-color: #6b5518; }
-  .chip.active { background: #0a3d4d; border-color: var(--accent); color: #d9f6fd; }
+  .chip.p1 { border-color: var(--p1-edge); } .chip.p2 { border-color: var(--p2-edge); }
+  .chip.active { background: var(--accent-wash); border-color: var(--accent); color: #d8fbf4; }
   .chip.active b { color: #fff; }
-  .chip.dim { opacity: .38; cursor: default; border-style: dashed; }
+  .chip.dim { opacity: .45; cursor: default; border-style: dashed; }
   .chip.dim:hover { border-color: var(--line); }
 
   /* ── connector health ────────────────────────────────── */
   #health { display: grid; grid-template-columns: repeat(auto-fill, minmax(118px, 1fr));
-            gap: .4rem; }
-  .health-chip { border-radius: 8px; padding: .34rem .55rem; font-size: .72rem;
-                 background: var(--panel-2); border: 1px solid var(--line); color: #a9b7cb;
+            gap: .45rem; }
+  .health-chip { border-radius: var(--r-md); padding: .34rem .55rem; font-size: .75rem;
+                 background: var(--panel-2); border: 1px solid var(--line); color: #aebcd1;
                  display: flex; align-items: center; gap: .4rem; cursor: pointer;
                  transition: border-color .15s; }
   .health-chip:hover { border-color: var(--accent); }
   .health-chip.selected { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent) inset; }
-  .health-chip b { color: var(--text); font-family: ui-monospace, monospace; font-size: .72rem; }
-  .health-chip i { font-style: normal; font-weight: 600; font-size: .68rem; margin-left: auto; }
+  .health-chip b { color: var(--text); font-family: ui-monospace, monospace; font-size: .75rem; }
+  .health-chip i { font-style: normal; font-weight: 600; font-size: .72rem; margin-left: auto; }
   .health-chip::before { content: ""; width: 7px; height: 7px; border-radius: 50%;
                          background: var(--faint); flex: none; }
-  .health-chip.faulted { border-color: #6b2020; } .health-chip.faulted i { color: var(--p1); }
+  .health-chip.faulted { border-color: var(--p1-edge); } .health-chip.faulted i { color: var(--p1); }
   .health-chip.faulted::before { background: var(--p1); box-shadow: 0 0 6px var(--p1); }
-  .health-chip.atrisk { border-color: #6b5518; } .health-chip.atrisk i { color: var(--p2); }
+  .health-chip.atrisk { border-color: var(--p2-edge); } .health-chip.atrisk i { color: var(--p2); }
   .health-chip.atrisk::before { background: var(--p2); }
   .health-chip.degrading i { color: var(--drift); }
   .health-chip.degrading::before { background: var(--drift); }
@@ -246,20 +273,25 @@ PAGE = """<!doctype html>
   #health-more { color: var(--muted); font-size: .7rem; padding: .3rem 0 0; }
 
   /* ── drift row ───────────────────────────────────────── */
-  #lower { margin-top: .8rem; }
+  #lower { margin-top: 1.2rem; }
   select { background: var(--panel-2); color: var(--text); border: 1px solid var(--line);
-           border-radius: 6px; padding: .3rem .55rem; font-size: .78rem; max-width: 100%; }
+           border-radius: var(--r-sm); padding: .3rem .55rem; font-size: .8rem; max-width: 100%; }
   #chart-wrap { overflow-x: auto; }
   #chart-wrap svg { display: block; }
 
-  footer { color: var(--faint); font-size: .72rem; margin-top: 1.1rem; padding: 0 .2rem; }
-  code { background: var(--panel-2); border: 1px solid var(--line); border-radius: 4px;
+  footer { color: var(--faint); font-size: .72rem; margin-top: 1.2rem; padding: 0 .2rem; }
+  code { background: var(--panel-2); border: 1px solid var(--line); border-radius: var(--r-sm);
          padding: 0 .3rem; font-size: .95em; }
 </style>
 </head>
 <body>
 <div id="topbar">
-  <div id="brand"><b><em>EV APM</em> — Maintenance Decision Support</b>
+  <div id="brand">
+    <svg width="21" height="21" viewBox="0 0 24 24" aria-hidden="true">
+      <circle cx="12" cy="12" r="10" fill="none" stroke="var(--line)" stroke-width="1.6"/>
+      <path d="M13.2 3.8 7.6 13h3.8l-1 7.2L16.4 11h-3.8z" fill="var(--accent)"/>
+    </svg>
+    <b><em>EV APM</em> — Maintenance Decision Support</b>
     <small>AI maintenance recommendations for EV charging infrastructure · polling every 2s</small></div>
   <div class="spacer"></div>
   <span id="conn-dot" title="pipeline link"></span><span id="conn-label">connecting…</span>
@@ -327,6 +359,15 @@ let categoryFilter = null;   // category string or null = all
 let openTraceKey = null;     // row whose decision trace is expanded (survives re-render)
 
 function rowKey(a) { return `${a.fired_at}|${a.connector_pk}|${category(a)}`; }
+
+// "May 16 · 15:00:00" for the queue column; the full ISO stays in the title
+// attribute — display formatting only, zero information loss
+const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
+                'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+function firedAtLabel(iso) {
+  const m = (iso || '').match(/^(\d{4})-(\d{2})-(\d{2})[T ](\d{2}:\d{2}:\d{2})/);
+  return m ? `${MONTHS[+m[2] - 1]} ${+m[3]} · ${m[4]}` : (iso || '—');
+}
 
 document.getElementById('sort-toggle').addEventListener('click', () => {
   sortMode = sortMode === 'tier' ? 'newest' : 'tier';
@@ -463,7 +504,9 @@ async function poll() {
                        a.impact_class || '—'));
       const signal = el('td', 'signal', a.deciding_signal || '—');
       signal.title = a.deciding_signal || '';
-      tr.append(badge, el('td', 'num', a.fired_at), conn,
+      const fired = el('td', 'num', firedAtLabel(a.fired_at));
+      fired.title = a.fired_at || '';
+      tr.append(badge, fired, conn,
         el('td', null, category(a)),
         impact,
         el('td', 'action', a.recommended_action || '—'),
@@ -494,11 +537,25 @@ async function poll() {
     }
     const coverage = document.getElementById('coverage');
     const ocppSeen = rollup.size - (rollup.has('session-drift') ? 1 : 0);
-    coverage.replaceChildren(el('span', 'headline',
-      `${ocppSeen} of 19 OCPP categories seen in buffer — bright = seen` +
-      (categoryFilter ? ` — filtering: ${categoryFilter} (click again to clear)` : ' (click to filter)') +
-      ' · dim = not yet observed:'));
-    for (const [key, entry] of [...rollup].sort((a, b) => b[1].count - a[1].count)) {
+    // headline: the fraction stated AND drawn (small bar), plus the filter hint
+    const headline = el('div', 'headline');
+    const bar = el('span', 'cov-bar');
+    const fill = document.createElement('i');
+    fill.style.width = `${Math.round(100 * Math.min(ocppSeen, 19) / 19)}%`;
+    bar.append(fill);
+    headline.append(
+      el('span', null, `${ocppSeen} of 19 OCPP categories seen in buffer`),
+      bar,
+      el('span', null, categoryFilter
+        ? `filtering: ${categoryFilter} (click again to clear)`
+        : 'click a chip to filter'));
+    coverage.replaceChildren(headline);
+    // seen chips, worst tier first, then by volume
+    const TIER_RANK = { P1: 0, P2: 1, P3: 2 };
+    const seenRow = el('div', 'cov-row');
+    for (const [key, entry] of [...rollup].sort((x, y) =>
+        (TIER_RANK[x[1].worst] ?? 3) - (TIER_RANK[y[1].worst] ?? 3)
+        || y[1].count - x[1].count)) {
       const chip = el('span', 'chip'
         + (entry.worst === 'P1' ? ' p1' : entry.worst === 'P2' ? ' p2' : '')
         + (categoryFilter === key ? ' active' : ''));
@@ -507,8 +564,9 @@ async function poll() {
         categoryFilter = categoryFilter === key ? null : key;
         poll();
       });
-      coverage.append(chip);
+      seenRow.append(chip);
     }
+    coverage.append(seenRow);
     // the 19 observed categories = distinct error_code values in the fleet's
     // committed taxonomy (data/reference/error_taxonomy.csv). err-code and
     // silence signals ride under OtherError in the real schema, so a seen
@@ -521,12 +579,17 @@ async function poll() {
     const covered = new Set(rollup.keys());
     if (['err1051', 'err1024', 'telemetry-silence'].some(k => covered.has(k)))
       covered.add('OtherError');
-    for (const cat of OCPP19) {
-      if (covered.has(cat)) continue;
-      const chip = el('span', 'chip dim');
-      chip.title = 'in the fleet taxonomy, not yet observed in this stream';
-      chip.append(el('b', null, cat));
-      coverage.append(chip);
+    const unseen = OCPP19.filter(cat => !covered.has(cat));
+    if (unseen.length) {
+      coverage.append(el('div', 'cov-unseen-label', 'not yet observed in this stream'));
+      const dimRow = el('div', 'cov-row');
+      for (const cat of unseen) {
+        const chip = el('span', 'chip dim');
+        chip.title = 'in the fleet taxonomy, not yet observed in this stream';
+        chip.append(el('b', null, cat));
+        dimRow.append(chip);
+      }
+      coverage.append(dimRow);
     }
     // validated on the chronological held-out split: 3.62% (n=2,015 normal
     // sessions, notebook 04) — the number documented in docs/category_metrics.md
