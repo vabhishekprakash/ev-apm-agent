@@ -134,6 +134,22 @@ def load_raw_ocpp_events(file_path: str) -> list[dict]:
     return load_ocpp_events(file_path)
 
 
+def follow_raw_ocpp(file_path: str) -> None:
+    """Streaming raw OCPP-J ingestion: tail a growing log file and emit each
+    frame's normalized event the moment it lands (arrival cadence). This
+    simulates live ingestion by tailing a file — it is NOT a live CMS socket."""
+    detector_dir = Path(__file__).resolve().parent.parent / "detector"
+    sys.path.insert(0, str(detector_dir))
+    from ocpp_log_adapter import stream_events
+
+    print(f"streaming raw OCPP-J ingestion — tailing {file_path} for appended "
+          f"frames (file tail, not a live CMS connection); Ctrl-C to stop",
+          file=sys.stderr)
+    for event in stream_events(file_path, follow=True):
+        event = {**event, "ts": event["ts"].isoformat()}
+        print(json.dumps(event), flush=True)
+
+
 if __name__ == "__main__":
     if "--format" in sys.argv:
         i = sys.argv.index("--format")
@@ -141,10 +157,15 @@ if __name__ == "__main__":
         if fmt != "raw-ocpp":
             print(f"unknown --format {fmt!r}; expected 'raw-ocpp'", file=sys.stderr)
             raise SystemExit(2)
-        if i + 2 >= len(sys.argv):
-            print("usage: python main.py --format raw-ocpp <file>", file=sys.stderr)
+        positional = [a for a in sys.argv[i + 2:] if a != "--follow"]
+        if not positional:
+            print("usage: python main.py --format raw-ocpp [--follow] <file>",
+                  file=sys.stderr)
             raise SystemExit(2)
-        all_events = load_raw_ocpp_events(sys.argv[i + 2])
+        if "--follow" in sys.argv:
+            follow_raw_ocpp(positional[0])
+            raise SystemExit(0)
+        all_events = load_raw_ocpp_events(positional[0])
     else:
         all_events = load_events()
     print(f"replaying {len(all_events)} events at {SPEED}x", file=sys.stderr)

@@ -99,7 +99,8 @@ PAGE = """<!doctype html>
 <style>
   :root {
     --bg: #070b12; --panel: #0d1420; --panel-2: #101a2b; --line: #1b2740;
-    --text: #dce5f2; --muted: #6b7a93; --faint: #46536b;
+    /* muted/faint lifted one step for projector + video legibility */
+    --text: #dce5f2; --muted: #7f8da6; --faint: #59677f;
     --accent: #22d3ee; --p1: #f87171; --p2: #fbbf24; --p3: #8d9aae;
     --ok: #34d399; --drift: #60a5fa;
   }
@@ -376,9 +377,12 @@ function traceRow(a) {
   };
   const pairNode = (term, node) => { dl.append(el('dt', null, term)); dl.append(node); };
 
-  pair('Detected', detected);
+  pair('Detected', detected + (a.mechanism ? ` — ${a.mechanism}` : ''));
   if (a.likely_root_cause) pair('Likely cause', a.likely_root_cause);
-  pair('Priority rule', base);
+  // labeled "deciding rule", not "base rule": two prioritizer escalations
+  // (drift streak, weak-signal burst) REPLACE the recorded signal rather than
+  // appending, so the first clause is whichever rule actually decided
+  pair('Deciding rule', base);
 
   // self-recovery check is the flagship rule — spell it out for err1051 from
   // the recovery_seconds field and the documented 15s transient window. Only
@@ -402,11 +406,20 @@ function traceRow(a) {
     `${a.priority_tier || '—'} → ${a.recommended_action || '—'} · ${a.impact_class || '—'}`);
   pair('Conclusion', a.deciding_signal || '—', 'conclusion');
 
+  // one-sentence readability layer, composed verbatim from the fields above —
+  // deterministic string assembly, nothing generated
+  const summary = `${category(a)}: ${base}`
+    + (escalations.length ? `; then ${escalations.join('; ')}` : '')
+    + ` — so the system filed it ${a.priority_tier || '—'}`
+    + (a.recommended_action ? ` (${a.recommended_action.toLowerCase()})` : '') + '.';
+  pair('In short', summary);
+
   const cell = el('td');
   cell.colSpan = 7;
   cell.append(el('div', 'trace-title', 'Why this recommendation'), dl,
     el('div', 'trace-foot',
-      'Recorded decision logic — deterministic rules and lookups, not live model reasoning.'));
+      'Recorded decision logic — deterministic rules and lookups; the summary '
+      + 'restates the fields above, nothing is generated.'));
   const tr = el('tr', 'trace-row');
   tr.append(cell);
   return tr;
@@ -685,11 +698,14 @@ async function drawDrift() {
   // fault-event annotations: each Layer 1 fault for this connector, placed at
   // its position in the plotted session sequence (by timestamp). Faults that
   // fired outside the plotted window are counted in the note but not drawn.
-  const first = records[0].closed_at || '', last = records[n - 1].closed_at || '~';
+  // faults from before the plotted window are skipped; faults AFTER the last
+  // plotted session pin to the right edge — that is the degrade-then-fault
+  // story the panel exists to show
+  const first = records[0].closed_at || '';
   const faults = allAlerts.filter(a => String(a.connector_pk) === String(pk)
     && a.detector_source !== 'layer2_drift' && a.stage !== 'candidate'
     && a.fired_at);
-  const drawable = faults.filter(f => f.fired_at >= first && f.fired_at <= last);
+  const drawable = faults.filter(f => f.fired_at >= first);
   const groups = new Map();  // session index -> {count, category}
   for (const f of drawable) {
     const idx = Math.min(n - 1, records.filter(r => (r.closed_at || '') <= f.fired_at).length);

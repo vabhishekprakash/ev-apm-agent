@@ -211,6 +211,56 @@ def test_raw_frame_end_to_end_lands_on_native_pk(tmp_path):
     assert event["hashed_charge_box_id"] == charger_hash
 
 
+def test_stream_events_matches_batch_content():
+    """Non-follow streaming yields the same events as batch load_events
+    (arrival order instead of time-sorted, but identical content)."""
+    batch = adapter.load_events(SAMPLE)
+    streamed = list(adapter.stream_events(SAMPLE))
+    key = lambda e: (e["event_type"], str(e["ts"]), e["connector_pk"])  # noqa: E731
+    assert sorted(map(key, streamed)) == sorted(map(key, batch))
+
+
+def test_follow_mode_picks_up_appended_frames(tmp_path):
+    """Tail mode: frames appended AFTER consumption starts are parsed, pushed
+    through the same anonymization/reconciliation, and yielded within the
+    poll cadence."""
+    import threading
+
+    log = tmp_path / "grow.csv"
+    frame1 = ('1;m-1;CBXSTREAM;"[2,""u-1"",""StatusNotification"",'
+              '{""connectorId"":1,""errorCode"":""NoError"",""status"":""Available"",'
+              '""timestamp"":""2026-06-01T10:00:00+00:00""}]";StatusNotification;'
+              '2026-06-01 10:00:00\n')
+    frame2 = ('2;m-2;CBXSTREAM;"[2,""u-2"",""StatusNotification"",'
+              '{""connectorId"":1,""errorCode"":""OtherError"",""status"":""Faulted"",'
+              '""vendorErrorCode"":""system-err1024"",'
+              '""timestamp"":""2026-06-01T10:01:00+00:00""}]";StatusNotification;'
+              '2026-06-01 10:01:00\n')
+    log.write_text(frame1, encoding="utf-8")
+
+    got: list = []
+
+    def consume():
+        for ev in adapter.stream_events(log, follow=True, poll_interval=0.1,
+                                        max_idle_s=2.0):
+            got.append(ev)
+
+    t = threading.Thread(target=consume)
+    t.start()
+    import time as _time
+    _time.sleep(0.4)                       # consumer reaches EOF, starts tailing
+    with log.open("a", encoding="utf-8") as f:
+        f.write(frame2)                    # the appended live frame
+    t.join(timeout=10)
+    assert not t.is_alive()
+    assert [e["status"] for e in got] == ["Available", "Faulted"]
+    assert got[1]["vendor_error_code"] == "system-err1024"
+    # anonymized on the fly: hashed id, no raw charger string
+    import json as _json
+    assert "CBXSTREAM" not in _json.dumps(got, default=str)
+    assert re.fullmatch(r"[0-9a-f]{64}", got[1]["hashed_charge_box_id"])
+
+
 def test_header_row_and_ampm_timestamp_tolerated():
     """Real-file specifics: a column-name header row is skipped, and a 12-hour
     AM/PM messageTime parses."""
