@@ -130,10 +130,14 @@ Click the **"sort: tier"** toggle to flip tier↔newest ordering; click a
 **category chip** to filter the feed to one category.
 
 ### 3c. Per-connector drift panel
-Drive any stream, then in the UI pick a connector in the **drift** dropdown.
+Drive any stream — the panel **auto-selects** the worst-health connector with
+session history; the dropdown switches connectors manually.
 **Expect:** a score trend line with red dots on flagged sessions, a threshold
-line, and a duration pane below. (With the bundled fixtures the drift panel is
-sparse; it fills densely when driven by real session history.)
+line, fault-event markers, and a duration pane below. `demo_replay` ships a
+synthetic degrade-then-fault arc on connector 4784325 (healthy sessions →
+rising anomaly scores → err1051), scored by the committed model, so the story
+renders even on a fresh clone; real session history (`data/raw`) fills it
+densely with real data.
 
 ### 3d. Alert-sink toggle
 - `ALERT_SINK=stdout` (default local) — alerts print as JSON lines.
@@ -204,6 +208,22 @@ correlation ids and any customer card fields never leave the adapter. It emits
 the identical event stream the CSV path produces, so the detector and UI are
 unchanged. Frame and skip counts print to stderr. Inspect the normalized
 stream alone with `python detector/ocpp_log_adapter.py path/to/logs.csv`.
+
+**Streaming raw OCPP-J ingestion (`--follow`).** Add `--follow` to TAIL a
+growing log: existing content is processed first, then newly appended frames
+are parsed, anonymized, reconciled to their native connector key, and pushed
+through the pipeline the moment they land — the dashboard updates within
+seconds. Be precise when narrating this: it **simulates live ingestion by
+tailing a file**; it is **not a live CMS socket connection**.
+
+```bash
+# terminal 1 — dashboard
+cd ui && python -m uvicorn main:app --port 8000
+# terminal 2 — stream the tail into the detector
+python replay/main.py --format raw-ocpp --follow path/to/logs.csv | \
+  (cd detector && ALERT_SINK=http ALERT_URL=http://localhost:8000/alerts python main.py)
+# terminal 3 — append frames to the file and watch them appear in the UI
+```
 
 ---
 

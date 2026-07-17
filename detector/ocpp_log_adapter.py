@@ -29,6 +29,7 @@ import hashlib
 import json
 import re
 import sys
+import time
 from collections import Counter
 from datetime import datetime
 from pathlib import Path
@@ -267,6 +268,76 @@ def load_events(path, inventory_dir=None) -> list[dict]:
     events.sort(key=lambda event: event["ts"])
     _report(counts, len(events))
     return events
+
+
+def _dispatch_line(line, lineno, events, pending_start, txn_connector,
+                   counts, inventory) -> None:
+    """Parse one raw line and route its frame through the CALL/CALLRESULT
+    handlers (shared by batch load_events and streaming stream_events)."""
+    if lineno == 0 and _is_header(line):
+        return
+    parsed = parse_line(line)
+    if parsed is None:
+        if line.strip():
+            counts["unparsed"] += 1
+        return
+    counts["frames"] += 1
+    frame = parsed["frame"]
+    kind = frame[0]
+    charger_hash = hash_charge_box_id(parsed["charger_id"])
+    msg_ts = _parse_ts(parsed["message_time"])
+    if kind == 2:
+        action = frame[2] if len(frame) > 2 else parsed["message_type"]
+        payload = frame[3] if len(frame) > 3 and isinstance(frame[3], dict) else {}
+        uuid = frame[1] if len(frame) > 1 else None
+        _handle_call(action, payload, uuid, charger_hash, msg_ts,
+                     events, pending_start, txn_connector, counts, inventory)
+    elif kind == 3:
+        uuid = frame[1] if len(frame) > 1 else None
+        result = frame[2] if len(frame) > 2 and isinstance(frame[2], dict) else {}
+        _handle_result(uuid, result, events, pending_start, txn_connector, counts)
+    else:
+        counts["skipped_callerror"] += 1
+
+
+def stream_events(path, inventory_dir=None, follow=False, poll_interval=0.5,
+                  max_idle_s=None):
+    """Streaming counterpart of load_events: yield normalized event records in
+    arrival order as lines are read. With follow=True the file is TAILED —
+    existing content is processed first, then newly appended frames are picked
+    up and yielded as they land (streaming raw OCPP-J ingestion by tailing a
+    growing log file; this is NOT a live CMS socket). Same anonymization and
+    native connector-key reconciliation as the batch path. `max_idle_s` ends a
+    followed stream after that much quiet time (used by tests); None = tail
+    forever."""
+    counts: Counter = Counter()
+    events: list[dict] = []
+    inventory = _get_inventory(inventory_dir)
+    pending_start: dict[str, dict] = {}
+    txn_connector: dict[int, int] = {}
+    emitted = 0
+    lineno = 0
+    idle = 0.0
+
+    with open(path, newline="", encoding="utf-8-sig") as handle:
+        while True:
+            line = handle.readline()
+            if not line:
+                if not follow:
+                    break
+                if max_idle_s is not None and idle >= max_idle_s:
+                    break
+                time.sleep(poll_interval)
+                idle += poll_interval
+                continue
+            idle = 0.0
+            _dispatch_line(line, lineno, events, pending_start, txn_connector,
+                           counts, inventory)
+            lineno += 1
+            while events:
+                emitted += 1
+                yield events.pop(0)
+    _report(counts, emitted)
 
 
 def _handle_call(action, payload, uuid, charger_hash, msg_ts, events,
