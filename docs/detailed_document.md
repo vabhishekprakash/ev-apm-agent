@@ -176,7 +176,9 @@ orthogonal degradation tracking rather than early warning (flag 17).
   verified**: err1051's machine fired end-to-end on 88/88 real status-spine
   sequences and 2/2 episodes of a full connector-month with transaction
   linkage; only its meter-zero corroborating step remains fixture-only
-  (flags 18, 22, 23, 25, 27).
+  (flags 18, 22, 23, 25, 27). (The dashboard's coverage counter reads
+  "7 of 19" on mixed streams — it counts Under- and OverVoltage as separate
+  OCPP categories; this document counts voltage as one.)
 - **The 13-second story, vindicated on real data:** across 190 real err1051
   events, median recovery is 10 s and **80% self-recover within 15 s** — so
   the P3 downgrade removes exactly that noise. Across *all* fault types only

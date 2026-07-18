@@ -89,7 +89,9 @@ needs a human."
   79,480/79,480; WeakSignal 150/150; Under/OverVoltage 688/688;
   telemetry-silence) — err1051's machine real-verified end-to-end on 88 real
   status-spine sequences plus a connector-month with transaction linkage
-  (flags 25/27); only its meter-zero step remains fixture-only.
+  (flags 25/27); only its meter-zero step remains fixture-only. *(If asked
+  why the dashboard counter says "7 of 19": it counts Under- and OverVoltage
+  as separate OCPP categories; the pitch counts voltage as one.)*
 
 **Speaker notes:** "The numbers we'll defend: three-point-six-two percent
 false positives on a chronological holdout — measured the way production
@@ -101,8 +103,11 @@ vendor strings observed at source."
 
 ## Slide 7 — Demo *(UX)*
 **Visual:** live demo or the dry-run recording; fallback still of the feed.
-- Two-source runbook: docs/demo_script.md v2 (compose raw replay + fault
-  injection onto one dashboard; drift panel on Station-A plug 1).
+- Runbook: docs/demo_script.md (prefill sequences + demo fixture at 0;
+  streaming --follow tail on camera; drift panel auto-selected on 4784325).
+- Say the honesty line verbatim when the drift panel is on screen: the arc
+  is demo data played through the real committed model — real fleet reads
+  noisier (lead-time doc).
 
 ## Slide 8 — Deployment *(Scalability)*
 **Bullets**
@@ -119,7 +124,7 @@ vendor strings observed at source."
 ---
 
 ### Consistency rules for the builder
-1. Numbers come ONLY from `data_audit_final.md` flags 14–23; if a slide and
+1. Numbers come ONLY from `data_audit_final.md` flags 14–28; if a slide and
    the audit disagree, the audit wins.
 2. Never say: predictive maintenance, battery health, precision/recall,
    "trained on the 33.5M source events" (we modeled the 10,090 delivered
