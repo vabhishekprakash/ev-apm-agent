@@ -48,8 +48,12 @@ seconds** — no second terminal, no extra flags. By default the pipeline
 replays the real exports under `data/raw`; on a fresh public clone (where
 `data/raw` is gitignored/empty) it automatically falls back to the bundled
 `demo_replay` fixture so all six fault categories still appear. `.env.example`
-ships `REPLAY_SPEED_MULTIPLIER=0` (instant dump); set it to `60` for a
-progressive, live-feel build when recording the demo.
+ships `REPLAY_SPEED_MULTIPLIER=0` (instant dump). **When recording the demo,
+do not replay `demo_replay` at 60×** — its history spans ~79 hours, so the
+first alert would take ~50 minutes of wall clock. Prefill everything at `0`,
+then get live on-camera motion from the `--follow` raw-log tail (§3½.1,
+~3 s append-to-dashboard) plus on-screen interactions (trace click, health
+tile) — the exact recording sequence is in `docs/demo_script.md`.
 
 **Demo startup sequence (what loads where):**
 - **Maintenance queue** — prioritized P1/P2/P3 rows fill immediately; click any

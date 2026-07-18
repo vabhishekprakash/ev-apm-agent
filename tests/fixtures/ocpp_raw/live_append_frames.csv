@@ -1,0 +1,3 @@
+1;m-live-1;CBXLIVE01;"[2,""u-live-1"",""StatusNotification"",{""connectorId"":1,""errorCode"":""OtherError"",""status"":""Charging"",""vendorErrorCode"":""system-err1051"",""timestamp"":""2026-07-20T10:00:00+00:00""}]";StatusNotification;2026-07-20 10:00:00
+2;m-live-2;CBXLIVE01;"[2,""u-live-2"",""StatusNotification"",{""connectorId"":1,""errorCode"":""OtherError"",""status"":""Finishing"",""vendorErrorCode"":""system-err1051"",""timestamp"":""2026-07-20T10:00:04+00:00""}]";StatusNotification;2026-07-20 10:00:04
+3;m-live-3;CBXLIVE01;"[2,""u-live-3"",""StatusNotification"",{""connectorId"":1,""errorCode"":""NoError"",""status"":""Available"",""timestamp"":""2026-07-20T10:00:09+00:00""}]";StatusNotification;2026-07-20 10:00:09

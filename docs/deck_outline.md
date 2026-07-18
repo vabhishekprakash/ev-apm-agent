@@ -59,12 +59,17 @@ Every number below passed the honesty audit (bottom of file).
   err1024 99/99, GroundFailure 79,480/79,480, WeakSignal 150/150,
   Under/OverVoltage 688/688, telemetry-silence); the machine's full-evidence
   path additionally corroborates via meter+transaction streams when present
-  (flag 25).
+  (flag 25). *(The dashboard's coverage counter reads "7 of 19" on mixed
+  streams — it counts Under- and OverVoltage as separate OCPP categories.)*
 
 ## 7. Demo *(UX)*
-- Live UI: replay streaming, P1/P2/P3 color-coded feed with deciding
-  signals, summary header, per-connector drift panel on the demo connector
-  (Station-A plug 1 — 946 real fault episodes).
+- Live UI: prefilled real sequence export + on-camera streaming tail
+  (--follow); P1/P2/P3 feed with deciding signals; decision trace opened on
+  a REAL self-recovered err1051; drift panel auto-selected on 4784325.
+- Drift-panel honesty line (verbatim, matches demo_script.md): the arc is
+  **demo data played through the real committed model** — the scores and
+  flags are the model's actual outputs; the real fleet reads noisier
+  (lead-time analysis, docs/layer2_leadtime.md).
 
 ## 8. Deployment *(Scalability)*
 - Sidecar container beside the operator's existing CMS — subscribes to the

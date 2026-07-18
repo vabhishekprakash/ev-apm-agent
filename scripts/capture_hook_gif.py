@@ -35,8 +35,12 @@ SPEED = os.environ.get("REPLAY_SPEED_MULTIPLIER", "45")
 # "why this recommendation" panel expanding on a self-recovery row
 OPEN_TRACE_AT = 8
 # frame at which the view pans down to the drift chart (the degrade-then-fault
-# money shot) for the closing beat
+# money shot) for the closing beat. HOOK_END_ON=trace skips that pan and ends
+# the clip on the decision-trace panel instead — used for the committed README
+# GIF, which is captured from the REAL sequences stream (no session history,
+# so there is no drift arc to show and the trace IS the closing shot).
 SCROLL_TO_CHART_AT = 16
+END_ON = os.environ.get("HOOK_END_ON", "chart")
 
 # filter the queue to err1051 so the self-recovery rows surface, then click one
 FILTER_JS = """() => {
@@ -84,9 +88,9 @@ def main() -> None:
                     page.evaluate(FILTER_JS)
                 if i == OPEN_TRACE_AT:
                     page.evaluate(OPEN_TRACE_JS)
-                if OPEN_TRACE_AT <= i < SCROLL_TO_CHART_AT:
+                if i >= OPEN_TRACE_AT and (END_ON == "trace" or i < SCROLL_TO_CHART_AT):
                     page.evaluate(SCROLL_JS)
-                if i == SCROLL_TO_CHART_AT:
+                if i == SCROLL_TO_CHART_AT and END_ON != "trace":
                     page.evaluate("() => { const c = document.getElementById('lower');"
                                   " if (c) c.scrollIntoView({block: 'end'}); }")
                 frames.append(Image.open(

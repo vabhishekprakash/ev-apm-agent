@@ -1,6 +1,6 @@
 ﻿# EV APM Agent
 
-![Live demo — the decision trace behind a self-recovery downgrade, on real fleet data](docs/assets/hook_selfrecovery.gif)
+![Live demo — the decision trace behind a real self-recovered err1051 socket fault, from the real fleet sequence export](docs/assets/hook_selfrecovery.gif)
 
 A watchful operator for EV charging stations that catches faults the instant they happen and spots chargers starting to go bad before they fully fail.
 
