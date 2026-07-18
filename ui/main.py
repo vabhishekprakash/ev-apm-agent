@@ -277,7 +277,7 @@ PAGE = """<!doctype html>
   select { background: var(--panel-2); color: var(--text); border: 1px solid var(--line);
            border-radius: var(--r-sm); padding: .3rem .55rem; font-size: .8rem; max-width: 100%; }
   #chart-wrap { overflow-x: auto; }
-  #chart-wrap svg { display: block; }
+  #chart-wrap svg { display: block; width: 100%; height: auto; }
 
   footer { color: var(--faint); font-size: .72rem; margin-top: 1.2rem; padding: 0 .2rem; }
   code { background: var(--panel-2); border: 1px solid var(--line); border-radius: var(--r-sm);
@@ -340,7 +340,7 @@ PAGE = """<!doctype html>
       <div class="spacer" style="flex:1"></div>
       <select id="connector-picker"><option value="">— select connector —</option></select>
     </div>
-    <div class="panel-body" id="chart-wrap"><svg id="chart" width="860" height="300"></svg></div>
+    <div class="panel-body" id="chart-wrap"><svg id="chart" viewBox="0 0 1560 380" preserveAspectRatio="xMidYMid meet"></svg></div>
   </div>
 </div>
 
@@ -702,28 +702,52 @@ async function refreshConnectors() {
     rollup2.length > 40 ? `+${rollup2.length - 40} more (worst first)` : '';
 }
 
+const SVG_NS = 'http://www.w3.org/2000/svg';
+
 function polyline(points, color, width) {
-  const p = document.createElementNS('http://www.w3.org/2000/svg', 'polyline');
+  const p = document.createElementNS(SVG_NS, 'polyline');
   p.setAttribute('points', points.join(' '));
   p.setAttribute('fill', 'none'); p.setAttribute('stroke', color);
   p.setAttribute('stroke-width', width || 1.5);
   return p;
 }
 
-function svgText(x, y, text, color) {
-  const t = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+function svgText(x, y, text, color, size, anchor) {
+  const t = document.createElementNS(SVG_NS, 'text');
   t.setAttribute('x', x); t.setAttribute('y', y);
-  t.setAttribute('fill', color || '#7a869a'); t.setAttribute('font-size', '10');
+  t.setAttribute('fill', color || 'var(--muted)');
+  t.setAttribute('font-size', String(size || 12));
+  if (anchor) t.setAttribute('text-anchor', anchor);
   t.textContent = text;
   return t;
 }
 
+function svgRect(x, y, w, h, fill, stroke, rx) {
+  const r = document.createElementNS(SVG_NS, 'rect');
+  r.setAttribute('x', x); r.setAttribute('y', y);
+  r.setAttribute('width', w); r.setAttribute('height', h);
+  r.setAttribute('fill', fill);
+  if (stroke) { r.setAttribute('stroke', stroke); r.setAttribute('stroke-width', '1'); }
+  if (rx) r.setAttribute('rx', rx);
+  return r;
+}
+
+function svgPolygon(points, fill) {
+  const p = document.createElementNS(SVG_NS, 'polygon');
+  p.setAttribute('points', points.join(' '));
+  p.setAttribute('fill', fill);
+  return p;
+}
+
 async function drawDrift() {
+  // Item-1 amplified rendering. Same data, same score/threshold/flag/fault
+  // computation as before — only the drawing changed. viewBox coordinates:
+  // 1560x380, so 12-13px text renders ~1:1 at demo width.
   const pk = document.getElementById('connector-picker').value;
   const svg = document.getElementById('chart');
   svg.replaceChildren();
   document.getElementById('drift-note').textContent = '';
-  const hint = msg => svg.append(svgText(20, 30, msg, '#46536b'));
+  const hint = msg => svg.append(svgText(28, 46, msg, 'var(--faint)', 14));
   if (!pk) { hint('select a connector to plot its per-session anomaly trend'); return; }
   const [records, allAlerts] = await Promise.all([
     (await fetch('/drift/' + pk)).json(),
@@ -731,39 +755,74 @@ async function drawDrift() {
   ]);
   if (!records.length) { hint('no scored sessions yet for this connector'); return; }
 
-  const W = 860, H = 300, PAD = 34, midY = 170;
+  const W = 1560, PADL = 64, PADR = 24;
+  const TOP = 42, BOT = 252;          // score pane
+  const DTOP = 298, DBOT = 368;       // duration pane
   const n = records.length;
-  const x = i => PAD + (W - 2 * PAD) * (n === 1 ? 0.5 : i / (n - 1));
+  const dense = n > 200;              // real-fleet views stay readable
+  const lineW = dense ? 1.8 : 2.8;
+  const dotR = dense ? 3.5 : 5;
+  const x = i => PADL + (W - PADL - PADR) * (n === 1 ? 0.5 : i / (n - 1));
 
-  // top pane: per-session anomaly score, shown so that HIGHER = more unusual
+  // per-session anomaly score, shown so that HIGHER = more unusual
   // (display inversion only; the underlying score is unchanged)
   const abn = records.map(r => -(r.anomaly_score ?? 0));
   const rawThr = records[records.length - 1].layer2_threshold;
   const thr = rawThr != null ? -rawThr : null;
   const sMin = Math.min(...abn, thr ?? -0.15, -0.15);
   const sMax = Math.max(...abn, thr ?? 0.15, 0.15);
-  const sy = v => 24 + (midY - 56) * (1 - (v - sMin) / (sMax - sMin));
-  if (thr != null) {
-    svg.append(polyline([`${PAD},${sy(thr)}`, `${W - PAD},${sy(thr)}`], '#ff6b6b', 1));
-    svg.append(svgText(W - PAD - 150, sy(thr) - 4, 'flag threshold — above = flagged', '#ff6b6b'));
+  const sy = v => TOP + (BOT - TOP - 14) * (1 - (v - sMin) / (sMax - sMin)) + 4;
+
+  // flagged zone: everything above the threshold IS the flagged region —
+  // visible geometry instead of a caption
+  if (thr != null && sy(thr) > TOP) {
+    svg.append(svgRect(PADL, TOP, W - PADL - PADR, Math.max(0, sy(thr) - TOP),
+                       'rgba(255,92,73,.07)'));
   }
-  svg.append(polyline(abn.map((v, i) => `${x(i)},${sy(v)}`), '#74b9ff'));
+
+  // y-gridlines + score ticks (4-5 nice steps)
+  const step = Math.max(0.05, Math.round((sMax - sMin) / 4 / 0.05) * 0.05);
+  for (let v = Math.ceil(sMin / step) * step; v <= sMax + 1e-9; v += step) {
+    const gy = sy(v);
+    if (gy < TOP + 4 || gy > BOT - 2) continue;
+    svg.append(polyline([`${PADL},${gy}`, `${W - PADR},${gy}`], 'var(--rule)', 1));
+    svg.append(svgText(PADL - 10, gy + 4, v.toFixed(2), 'var(--faint)', 12, 'end'));
+  }
+
+  // threshold: dashed line, label anchored LEFT inside the zone (fault-cluster
+  // chips live in the top annotation band, so the two can never collide)
+  if (thr != null) {
+    const ty = sy(thr);
+    const t = polyline([`${PADL},${ty}`, `${W - PADR},${ty}`], 'var(--p1)', 1.5);
+    t.setAttribute('stroke-dasharray', '7 5');
+    svg.append(t);
+    svg.append(svgText(PADL + 8, ty > TOP + 22 ? ty - 8 : ty + 18,
+      'flag threshold — above = flagged', 'var(--p1)', 12.5));
+  }
+
+  // area fill under the score curve, then the curve itself
+  const curve = abn.map((v, i) => `${x(i)},${sy(v)}`);
+  svg.append(svgPolygon(
+    [`${x(0)},${BOT}`, ...curve, `${x(n - 1)},${BOT}`], 'rgba(90,162,255,.12)'));
+  svg.append(polyline(curve, 'var(--drift)', lineW));
   for (let i = 0; i < n; i++) if (records[i].flagged) {
-    const dot = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+    const dot = document.createElementNS(SVG_NS, 'circle');
     dot.setAttribute('cx', x(i)); dot.setAttribute('cy', sy(abn[i]));
-    dot.setAttribute('r', 3.5); dot.setAttribute('fill', '#ff6b6b');
-    dot.append(Object.assign(document.createElementNS('http://www.w3.org/2000/svg', 'title'),
+    dot.setAttribute('r', dotR); dot.setAttribute('fill', 'var(--p1)');
+    dot.setAttribute('stroke', '#070d18');
+    dot.setAttribute('stroke-width', dense ? 1.2 : 1.6);
+    dot.append(Object.assign(document.createElementNS(SVG_NS, 'title'),
       {textContent: `flagged session — closed ${records[i].closed_at}`}));
     svg.append(dot);
   }
-  svg.append(svgText(PAD, 14, 'session anomaly score — higher = more unusual (red dots = flagged)', '#74b9ff'));
+  svg.append(svgText(PADL, 24,
+    'session anomaly score — higher = more unusual (red dots = flagged)',
+    'var(--drift)', 12.5));
 
   // fault-event annotations: each Layer 1 fault for this connector, placed at
-  // its position in the plotted session sequence (by timestamp). Faults that
-  // fired outside the plotted window are counted in the note but not drawn.
-  // faults from before the plotted window are skipped; faults AFTER the last
-  // plotted session pin to the right edge — that is the degrade-then-fault
-  // story the panel exists to show
+  // its position in the plotted session sequence (by timestamp). Faults from
+  // before the plotted window are skipped; faults AFTER the last plotted
+  // session pin to the right edge — the degrade-then-fault story itself.
   const first = records[0].closed_at || '';
   const faults = allAlerts.filter(a => String(a.connector_pk) === String(pk)
     && a.detector_source !== 'layer2_drift' && a.stage !== 'candidate'
@@ -777,34 +836,53 @@ async function drawDrift() {
     groups.set(idx, g);
   }
   const marked = [...groups].sort((a, b) => b[0] - a[0]).slice(0, 8);
-  for (const [idx] of marked)
-    svg.append(polyline([`${x(idx)},22`, `${x(idx)},${midY - 26}`], '#fdcb6e', 1));
+  for (const [idx] of marked) {
+    const fl = polyline([`${x(idx)},34`, `${x(idx)},${BOT}`], 'var(--p2)', 1.5);
+    fl.setAttribute('stroke-dasharray', '2 3');
+    svg.append(fl);
+  }
+  // flag chips in the top annotation band (y 6..26): summary chip when the
+  // cluster is big, per-group chips otherwise; chips clamp right of the title
+  // zone and skip (line stays) rather than ever overlapping
+  const chipFor = (fx, label) => {
+    const w = 16 + label.length * 6.6;
+    const minX = PADL + 560, maxX = W - PADR - w;
+    const cx = Math.max(minX, Math.min(fx - w / 2, maxX));
+    return { cx, w, label };
+  };
+  const chips = [];
   if (marked.length > 3) {
-    // clustered faults: one summary tag instead of overlapping labels
     const total = marked.reduce((s, [, g]) => s + g.count, 0);
-    const fx = x(marked[0][0]);
-    svg.append(svgText(Math.max(PAD, Math.min(fx - 120, W - PAD - 190)), 32,
-      `⚠ ${total} fault events here: ${marked[0][1].category}`, '#fdcb6e'));
+    chips.push(chipFor(x(marked[0][0]),
+      `⚠ ${total} fault events here: ${marked[0][1].category}`));
   } else {
-    let lane = 0;
-    for (const [idx, g] of marked) {
-      const label = `⚠ ${g.count > 1 ? g.count + '× ' : ''}fault: ${g.category}`;
-      svg.append(svgText(Math.max(PAD, Math.min(x(idx) - 40, W - PAD - 160)),
-                         32 + (lane % 3) * 11, label, '#fdcb6e'));
-      lane++;
-    }
+    for (const [idx, g] of marked)
+      chips.push(chipFor(x(idx),
+        `⚠ ${g.count > 1 ? g.count + '× ' : ''}fault: ${g.category}`));
+  }
+  let prevStart = Infinity;
+  for (const c of chips) {
+    if (c.cx + c.w > prevStart - 8) c.cx = prevStart - 8 - c.w;   // shift left
+    if (c.cx < PADL + 560) continue;                              // no room: line only
+    svg.append(svgRect(c.cx, 6, c.w, 20, 'var(--p2-wash)', 'var(--p2-edge)', 10));
+    svg.append(svgText(c.cx + 8, 20, c.label, 'var(--p2)', 12));
+    prevStart = c.cx;
   }
 
   // x-axis time cues: first and last session close dates
-  svg.append(svgText(PAD, midY - 10, (records[0].closed_at || '').slice(0, 10), '#5a6a84'));
-  svg.append(svgText(W - PAD - 62, midY - 10, (records[n - 1].closed_at || '').slice(0, 10), '#5a6a84'));
+  svg.append(svgText(PADL, 272, (records[0].closed_at || '').slice(0, 10), 'var(--faint)', 12));
+  svg.append(svgText(W - PADR, 272, (records[n - 1].closed_at || '').slice(0, 10),
+                     'var(--faint)', 12, 'end'));
 
-  // bottom pane: session duration (minutes)
+  // bottom pane: session duration (minutes) — approved legacy surface
   const durations = records.map(r => (r.duration_sec ?? 0) / 60);
   const dMax = Math.max(...durations, 1);
-  const dy = v => midY + 18 + (H - midY - 34) * (1 - v / dMax);
-  svg.append(polyline(records.map((r, i) => `${x(i)},${dy((r.duration_sec ?? 0) / 60)}`), '#2ecc71'));
-  svg.append(svgText(PAD, midY + 14, 'session duration (min)', '#2ecc71'));
+  const dy = v => DTOP + (DBOT - DTOP) * (1 - v / dMax);
+  const dcurve = records.map((r, i) => `${x(i)},${dy((r.duration_sec ?? 0) / 60)}`);
+  svg.append(svgPolygon(
+    [`${x(0)},${DBOT}`, ...dcurve, `${x(n - 1)},${DBOT}`], 'rgba(47,212,140,.08)'));
+  svg.append(polyline(dcurve, 'var(--ok)', dense ? 1.6 : 2.2));
+  svg.append(svgText(PADL, 292, 'session duration (min)', 'var(--ok)', 12.5));
 
   document.getElementById('drift-note').textContent =
     `${n} sessions, oldest → newest — ${records.filter(r => r.flagged).length} flagged`
