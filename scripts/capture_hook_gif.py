@@ -34,6 +34,9 @@ SPEED = os.environ.get("REPLAY_SPEED_MULTIPLIER", "45")
 # frame at which the decision trace is opened, so the clip shows the new
 # "why this recommendation" panel expanding on a self-recovery row
 OPEN_TRACE_AT = 8
+# frame at which the view pans down to the drift chart (the degrade-then-fault
+# money shot) for the closing beat
+SCROLL_TO_CHART_AT = 16
 
 # filter the queue to err1051 so the self-recovery rows surface, then click one
 FILTER_JS = """() => {
@@ -81,8 +84,11 @@ def main() -> None:
                     page.evaluate(FILTER_JS)
                 if i == OPEN_TRACE_AT:
                     page.evaluate(OPEN_TRACE_JS)
-                if i >= OPEN_TRACE_AT:
+                if OPEN_TRACE_AT <= i < SCROLL_TO_CHART_AT:
                     page.evaluate(SCROLL_JS)
+                if i == SCROLL_TO_CHART_AT:
+                    page.evaluate("() => { const c = document.getElementById('lower');"
+                                  " if (c) c.scrollIntoView({block: 'end'}); }")
                 frames.append(Image.open(
                     __import__("io").BytesIO(page.screenshot())).convert("P",
                                                                          palette=Image.ADAPTIVE))
