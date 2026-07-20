@@ -55,6 +55,7 @@ We'll prove it on real data from a production CMS — **655 chargers across 130+
 | FPR & coverage charts | [`docs/assets/`](docs/assets/) |
 | Pitch deck outline & speaker pack | [`docs/deck_outline.md`](docs/deck_outline.md), [`docs/slides_speaker_pack.md`](docs/slides_speaker_pack.md) |
 | Demo narration script | [`docs/demo_script.md`](docs/demo_script.md) |
+| **Full team video-recording script** (setup, shot-by-shot, screen/click guide) | [`docs/VIDEO_SCRIPT_TEAM.md`](docs/VIDEO_SCRIPT_TEAM.md) |
 | Future work (scope-freeze ledger) | [`docs/future_work.md`](docs/future_work.md) |
 
 ## Architecture
