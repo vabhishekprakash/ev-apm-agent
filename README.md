@@ -89,7 +89,7 @@ Local pipeline without Docker:
 
 ```bash
 REPLAY_SPEED_MULTIPLIER=0 python replay/main.py | python detector/main.py
-python -m pytest tests/    # 90 tests (87 on a fresh clone)
+python -m pytest tests/    # 98 tests (95 on a fresh clone)
 ```
 
 Full step-by-step run + manual-test instructions: [`docs/RUNBOOK.md`](docs/RUNBOOK.md).

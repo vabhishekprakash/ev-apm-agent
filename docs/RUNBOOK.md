@@ -44,28 +44,79 @@ curl.exe -s -o NUL -w "%{http_code}\n" http://localhost:8000/    # expect 200
 ```
 
 Open **http://localhost:8000** in a browser. **The dashboard populates within
-seconds** — no second terminal, no extra flags. By default the pipeline
-replays the real exports under `data/raw`; on a fresh public clone (where
-`data/raw` is gitignored/empty) it automatically falls back to the bundled
-`demo_replay` fixture so all six fault categories still appear. `.env.example`
-ships `REPLAY_SPEED_MULTIPLIER=0` (instant dump). **When recording the demo,
-do not replay `demo_replay` at 60×** — its history spans ~79 hours, so the
-first alert would take ~50 minutes of wall clock. Prefill everything at `0`,
-then get live on-camera motion from the `--follow` raw-log tail (§3½.1,
-~3 s append-to-dashboard) plus on-screen interactions (trace click, health
-tile) — the exact recording sequence is in `docs/demo_script.md`.
+seconds.** By default the pipeline replays the real exports under `data/raw`;
+on a fresh public clone (where `data/raw` is gitignored/empty) it falls back
+to the bundled `demo_replay` fixture and prints an unmissable
+`SYNTHETIC FIXTURE DATA` banner in `docker compose logs replay` — fixture
+rows are never silently passed off as real. **Any other missing source
+folder is a hard error (exit 2)**, never a substitution: check
+`docker compose logs replay` if the queue stays empty.
 
-**Demo startup sequence (what loads where):**
-- **Maintenance queue** — prioritized P1/P2/P3 rows fill immediately; click any
-  row for the "Why this recommendation" decision trace.
-- **Connector health** — Faulted / At-risk / Degrading / Healthy tiles; click a
-  tile to load that connector into the drift panel.
-- **Per-connector drift** — auto-selects the worst-health connector with
-  history and plots its anomaly trend + fault annotations (dense on the real
-  `data/raw` history; sparse on the fresh-clone fixture).
-- **Category coverage** — all 19 OCPP categories, seen ones bright.
+### 1a. Demo-day sequence (verified 2026-07-19 — expected output at every step)
 
-Stop / reset:
+> ⚠️ **Re-injecting a stream you already loaded duplicates every row and
+> doubles all KPIs.** The buffers are in-memory; the only reset is
+> `docker compose down -v` (Docker) or restarting `uvicorn` (local §2).
+> Run each injection exactly once per reset.
+
+**Step 0 — reset (always start here):**
+```bash
+docker compose down -v
+```
+
+**Step 1 — start the stack on the REAL error-sequence export** (requires the
+gitignored real exports — team machines only; a fresh public clone must use
+the fixture path in §3a instead):
+```bash
+MSYS_NO_PATHCONV=1 DATA_DIR=/app/data/interim/sequences_replay \
+  docker compose up -d
+sleep 30
+```
+
+**Step 2 — VERIFY the real data loaded** (all rows REAL fleet data):
+```bash
+curl -s "http://localhost:8000/alerts?limit=500" | python -c \
+  "import json,sys; a=json.load(sys.stdin); \
+print('alerts:',len(a)); print('connectors:',sorted({str(x['connector_pk']) for x in a}))"
+```
+**Expect:** `alerts: 500` (ring-buffer cap; 869 were emitted) and connectors
+**exactly** `['1679593','1679594','1880097','1880098','1989806','1989807']`.
+**4784325 must NOT appear** — if it does, the fixture leaked in: reset and
+re-check your `DATA_DIR`. Queue tiers ≈ P1 219 / P2 202 / P3 79; ~76 rows say
+*"self-recovered in Ns"*.
+
+**Step 3 — inject the demo fixture ONCE** (adds the SYNTHETIC arc connector
+4784325, the GroundFailure safety pill, session-drift rows, and sessions):
+```bash
+DATA_DIR=tests/fixtures/demo_replay REPLAY_SPEED_MULTIPLIER=0 \
+  python replay/main.py | (cd detector && ALERT_SINK=http \
+  LAYER2_THRESHOLD=-0.1187 ALERT_URL=http://localhost:8000/alerts python main.py)
+```
+**Expect on its stderr:** `sessions_closed: 21, sessions_scored: 19,
+layer2_flagged: 4, alerts: 17, parse_errors: 0`.
+
+**Step 4 — VERIFY the combined state:**
+```bash
+curl -s http://localhost:8000/connectors     # expect: exactly [4784325]
+curl -s http://localhost:8000/stats          # expect sessions_closed 21 / scored 19
+```
+In the browser: 4784325 now present in the queue and **auto-selected in the
+drift panel** with the degrade-then-fault arc; 8 category chips; all three
+tiers. Combined buffer stays at 500 (cap).
+
+**Which rows are REAL vs FIXTURE after this sequence:** everything on
+connectors 1679593/1679594/1880097/1880098/1989806/1989807 is **real fleet
+data** (the sequence export). Everything on 4784325/5802030/1744735 — and
+the OverVoltage/GroundFailure rows the fixture stages on 2009529/1679593 —
+is **synthetic fixture data**; the drift arc on 4784325 is demo sessions
+scored by the real committed model. Never narrate fixture rows as real.
+
+**Recording note:** never replay `demo_replay` at 60× (79-hour span ≈ 50 min
+to the first alert). Live on-camera motion comes from the `--follow` raw-log
+tail (§3½.1, ~3 s append-to-dashboard) — full recording sequence in
+`docs/demo_script.md`.
+
+Stop / reset (also the duplication reset):
 ```bash
 docker compose down -v      # -v clears the event-bus volume between runs
 ```
@@ -234,7 +285,7 @@ python replay/main.py --format raw-ocpp --follow path/to/logs.csv | \
 ## 4. Verify correctness (automated)
 
 ```bash
-python -m pytest tests/ -q            # 90 tests, all pass (87 on a fresh clone)
+python -m pytest tests/ -q            # 98 tests, all pass (95 on a fresh clone)
 bash tests/anonymization_audit.sh     # data-governance gate → PASS
 bash scripts/run_all_tests.sh         # everything above in one shot
 ```
