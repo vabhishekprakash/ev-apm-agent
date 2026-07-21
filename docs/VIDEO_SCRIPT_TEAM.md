@@ -83,29 +83,29 @@ line is what separates you from a team that got caught overclaiming.
 
 ## PART 2 — Pre-recording setup (do this once, before you hit record)
 
-Three terminals. Do this in order — **do not** skip straight to step 3, and
-**do not** replay `demo_replay` at 60× (its history spans ~79 hours of event
-time; you'd wait ~50 minutes for the first alert on camera).
+**Follow `docs/RUNBOOK.md` §1a steps 0–4 verbatim** — it is the verified
+sequence, with the expected output printed at every step so you can tell
+success from silent failure:
 
-**Terminal 1 — the dashboard**
-```bash
-cd ui && python -m uvicorn main:app --port 8000
-```
+0. `docker compose down -v` — the reset. **Re-injecting a stream without
+   this reset duplicates every row and doubles all KPIs.**
+1. `MSYS_NO_PATHCONV=1 DATA_DIR=/app/data/interim/sequences_replay docker
+   compose up -d` — loads the REAL error-sequence export.
+2. VERIFY: connectors must be exactly 1679593/1679594/1880097/1880098/
+   1989806/1989807 — **no 4784325 yet**. (Exact curl in RUNBOOK §1a.)
+3. Inject `tests/fixtures/demo_replay` ONCE via the host pipe — expect
+   `sessions_closed: 21, sessions_scored: 19` on its stderr.
+4. VERIFY: 4784325 now present and auto-selected in the drift panel.
 
-**Terminal 2 — prefill BOTH real and demo data, instantly (run one after the
-other, each completes in a few seconds)**
-```bash
-DATA_DIR=data/interim/sequences_replay REPLAY_SPEED_MULTIPLIER=0 \
-  python replay/main.py | (cd detector && ALERT_SINK=http \
-  ALERT_URL=http://localhost:8000/alerts python main.py)
+After step 4 the queue is full, the coverage panel shows real category
+variety, and the drift panel shows the degrade-then-fault arc with zero
+clicks. **This is your starting screen.**
 
-DATA_DIR=tests/fixtures/demo_replay REPLAY_SPEED_MULTIPLIER=0 \
-  python replay/main.py | (cd detector && ALERT_SINK=http \
-  ALERT_URL=http://localhost:8000/alerts python main.py)
-```
-After this, the queue is full, the coverage panel shows real category
-variety, and the drift panel has auto-selected connector 4784325 with its
-degrade-then-fault arc already visible. **This is your starting screen.**
+**REAL vs FIXTURE (never mix these up on mic):** connectors
+1679593/1679594/1880097/1880098/1989806/1989807 = **real fleet data**;
+4784325/5802030/1744735 and the fixture's staged OverVoltage/GroundFailure
+rows = **synthetic demo data** (the 4784325 arc is demo sessions scored by
+the real committed model — say so when it's on screen).
 
 **Terminal 3 — prep the live-streaming beat (don't run yet)**
 ```bash
@@ -172,15 +172,18 @@ first thing a viewer's eye should land on.
 **This is your strongest 20 seconds. If you only have time to nail one
 scene, nail this one.**
 
-**SCREEN:** Maintenance queue.
+**SCREEN:** Maintenance queue. Every row you touch in this scene is **REAL
+fleet data** (sequence-export connectors) — you can say so on mic.
 **ACTION:** Click the **err1051 chip** in the Category Coverage panel to
 filter the queue to err1051 rows only.
-**SHOWS:** Two visually similar err1051 rows, different tiers.
+**SHOWS:** Grey P3 rows ("self-recovered in Ns") and amber P2 rows
+("self-recovered in Ns; repeat offender (P1 in last 24h)"). *(Note: there is
+no P1 err1051 row in this feed — do not promise one.)*
 
-> "Watch the err1051 socket fault. Here's one that recovered by itself in a
-> few seconds."
+> "Watch the err1051 socket fault. Here's one that recovered by itself in
+> four seconds."
 
-**ACTION:** Click on the **grey P3 err1051 row** (deciding signal starts
+**ACTION:** Click a **grey P3 err1051 row** (deciding signal starts
 "self-recovered in…").
 **SHOWS:** The "Why this recommendation" decision-trace panel expands
 beneath the row — Detected, Likely cause, Deciding rule, Self-recovery
@@ -191,16 +194,22 @@ check, Recommendation, Conclusion, and the "In short" one-line summary.
 > fired, not a summary written after the fact — the footer says so:
 > deterministic logic, nothing generated."
 
-**ACTION:** Click the row again to collapse it, then click a **red P1**
-row elsewhere in the queue (any P1 with "no recovery observed" or a silence
-signal).
-**SHOWS:** Red badge, "Dispatch technician" in bold, a different deciding
-signal.
+**ACTION:** Collapse the trace, point at an **amber P2 err1051 row** whose
+signal ends "repeat offender (P1 in last 24h)".
+**SHOWS:** Same fault category, higher tier, "Schedule inspection within 7
+days" in bold.
 
-> "This one never recovered — straight to P1, dispatch. Across a hundred and
-> ninety real occurrences of this fault, eighty percent self-recovered
-> within fifteen seconds. That's the alert fatigue we delete, without
-> hiding the twenty percent that genuinely need a human."
+> "Same fault — but this connector re-offended within twenty-four hours, so
+> the agent escalates it: schedule an inspection."
+
+**ACTION:** Click the err1051 chip again to clear the filter; point at a
+**red P1 UnderVoltage row** ("UnderVoltage event; repeated within 24h").
+**SHOWS:** Red badge, "Dispatch technician" in bold.
+
+> "And when something genuinely needs a human — straight to P1, dispatch.
+> Across a hundred and ninety real occurrences of that socket fault, eighty
+> percent self-recovered within fifteen seconds. That's the alert fatigue
+> we delete, without hiding the failures that matter."
 
 ---
 
@@ -317,16 +326,26 @@ counts Under/OverVoltage as two categories.
 ## PART 5 — Quick reference: full command block (copy-paste for a dry run)
 
 ```bash
-# Terminal 1
-cd ui && python -m uvicorn main:app --port 8000
+# Step 0 — reset (mandatory between takes: re-injection duplicates rows)
+docker compose down -v
 
-# Terminal 2 (run both lines in sequence, each finishes in seconds)
-DATA_DIR=data/interim/sequences_replay REPLAY_SPEED_MULTIPLIER=0 \
-  python replay/main.py | (cd detector && ALERT_SINK=http \
-  ALERT_URL=http://localhost:8000/alerts python main.py)
+# Step 1 — stack up on the REAL sequence export
+MSYS_NO_PATHCONV=1 DATA_DIR=/app/data/interim/sequences_replay \
+  docker compose up -d
+sleep 30
+
+# Step 2 — VERIFY (expect the 6 real connectors, NO 4784325)
+curl -s "http://localhost:8000/alerts?limit=500" | python -c \
+  "import json,sys; a=json.load(sys.stdin); \
+print(len(a), sorted({str(x['connector_pk']) for x in a}))"
+
+# Step 3 — inject the demo fixture ONCE (expect sessions_closed: 21 on stderr)
 DATA_DIR=tests/fixtures/demo_replay REPLAY_SPEED_MULTIPLIER=0 \
   python replay/main.py | (cd detector && ALERT_SINK=http \
-  ALERT_URL=http://localhost:8000/alerts python main.py)
+  LAYER2_THRESHOLD=-0.1187 ALERT_URL=http://localhost:8000/alerts python main.py)
+
+# Step 4 — VERIFY combined (expect [4784325])
+curl -s http://localhost:8000/connectors
 
 # Terminal 3 (start a minute before Scene 5)
 head -20 data/raw/logs_sample.csv > /tmp/live_feed.csv
@@ -341,7 +360,6 @@ cat tests/fixtures/ocpp_raw/live_append_frames.csv >> /tmp/live_feed.csv
 http://localhost:8000
 ```
 
-To reset between takes: `Ctrl-C` all terminals, then re-run from Terminal 1.
-No Docker required for this flow (faster iteration than `docker compose`),
-but the cold-clone Docker path (`docs/RUNBOOK.md` §1) is what a judge will
-actually run, so do one full Docker dry-run before submission day too.
+Every step's full expected output is in `docs/RUNBOOK.md` §1a — if a
+checkpoint doesn't match, reset and fix before recording. Do one full dry
+run of this exact block before submission day.

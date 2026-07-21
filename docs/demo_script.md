@@ -1,20 +1,21 @@
 # Demo script v2 — 3–4 min narrated walkthrough (revised after dry-run #1)
 
-Setup before recording (prefill instantly, then inject live — never point a
-camera at `demo_replay` at 60×: its 79-hour span means ~50 minutes to the
-first alert):
+Setup before recording — run **docs/RUNBOOK.md §1a steps 0–4 verbatim**
+(reset → stack up on `data/interim/sequences_replay` → VERIFY real
+connectors → inject `demo_replay` once → VERIFY combined). Each step states
+its expected output; do not proceed past a failed checkpoint. Never point a
+camera at `demo_replay` at 60× (79-hour span ≈ 50 minutes to the first
+alert), and never inject the same stream twice without a reset — it
+duplicates every row and doubles the KPIs.
 
-1. Terminal 1 — dashboard: `cd ui && python -m uvicorn main:app --port 8000`
-2. Prefill BOTH sources at `REPLAY_SPEED_MULTIPLIER=0` (each is one command;
-   run sequentially into the same dashboard):
-   `DATA_DIR=data/interim/sequences_replay REPLAY_SPEED_MULTIPLIER=0
-   python replay/main.py | (cd detector && ALERT_SINK=http
-   ALERT_URL=http://localhost:8000/alerts python main.py)` — the real
-   err-sequence export: 4 categories, all three tiers, 67 real
-   self-recovered err1051 P3s. Then the same command with
-   `DATA_DIR=tests/fixtures/demo_replay` — adds the GroundFailure safety
-   pill, session-drift rows, and the degrade-then-fault arc; the drift
-   panel auto-selects connector 4784325 with zero clicks.
+**REAL vs FIXTURE — what you may narrate as real:** rows on connectors
+1679593 / 1679594 / 1880097 / 1880098 / 1989806 / 1989807 are **real fleet
+data**. Rows on 4784325 / 5802030 / 1744735 (and the fixture's staged
+OverVoltage/GroundFailure rows) are **synthetic**; the drift arc on 4784325
+is demo sessions scored by the real committed model. If you point at it,
+say so.
+
+Then, for the live beat:
 3. Live beat for the camera — the streaming tail (verified ~3 s
    append-to-dashboard). Do NOT re-inject a fixture that was already
    prefilled: that produces duplicate rows on screen. Instead:
@@ -53,19 +54,22 @@ at the bottom). Numbers match `docs/deck_outline.md` exactly.
 > It tracks charger behavior — we are explicitly not doing battery
 > diagnostics."
 
-**0:40–1:30 — prioritization story** *(prefilled queue on screen; click the
-err1051 chip to filter, then click the P3 row — the decision trace expands
-on camera)*
+**0:40–1:30 — prioritization story** *(prefilled queue on screen; every row
+in this beat is REAL fleet data. Click the err1051 chip to filter.)*
 > "The queue behind these is a real fleet error-sequence export. Watch the
-> err1051 socket fault — here's one that recovered by itself in 13 seconds.
-> The agent files it as P3, log-only: *[point at the grey badge and the
-> deciding signal 'self-recovered in 13s'; click the row — the decision
-> trace shows every rule that fired]*. No technician truck rolls. This
-> other one never recovered — it goes straight to P1 with 'no recovery
-> observed' *[point at red badge]*. Across a hundred and ninety real
-> occurrences of this fault, eighty percent self-recovered within fifteen
-> seconds — that's the alert fatigue we delete, without hiding the real
-> failures."
+> err1051 socket fault — here's one that recovered by itself in four
+> seconds. The agent files it as P3, log-only: *[point at a grey badge
+> whose deciding signal reads 'self-recovered in Ns'; click the row — the
+> decision trace shows every rule that fired]*. No technician truck rolls.
+> Now the same fault on a connector that re-offended within twenty-four
+> hours — the agent escalates it to P2, schedule an inspection *[point at
+> an amber row whose signal ends 'repeat offender (P1 in last 24h)']*.
+> And when something genuinely needs a human *[click the err1051 chip
+> again to clear the filter; point at a red P1 UnderVoltage row reading
+> 'repeated within 24h']* — straight to P1, dispatch. Across a hundred
+> and ninety real occurrences of that socket fault, eighty percent
+> self-recovered within fifteen seconds — that's the alert fatigue we
+> delete, without hiding the real failures."
 
 **1:30–2:20 — degradation story** *(drift panel, auto-selected connector
 4784325)*
@@ -104,8 +108,9 @@ on camera)*
 
 | Narration claim | On-screen anchor | Status |
 |---|---|---|
-| P3 "self-recovered in 13s" | deciding-signal column, grey badge; decision trace on click | ✅ live (day5 injection + real sequence prefill) |
-| P1 "no recovery observed" | deciding-signal column, red badge | ✅ live |
+| P3 "self-recovered in Ns" (REAL, sequences export) | deciding-signal column, grey badge; decision trace on click | ✅ live — ~76 such rows in the buffer |
+| P2 "self-recovered; repeat offender (P1 in last 24h)" (REAL) | amber badge, same category — the escalation story | ✅ live |
+| P1 dispatch tier (REAL) | red UnderVoltage row, "repeated within 24h" | ✅ live — **do not narrate a P1 err1051 "no recovery observed": no such row exists in this feed** |
 | 80% of 190 real err1051 ≤15 s | narration (flag 23); the prefilled queue holds 67 real self-recovered P3s | ✅ documented |
 | Degradation arc | drift panel, auto-selected 4784325 | ✅ live — **narrate as demo data through the real committed model** (real fleet reads noisier; lead-time doc) |
 | Anomaly score + flagged dots + fault flag | drift panel SVG | ✅ live |

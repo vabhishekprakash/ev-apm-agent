@@ -146,7 +146,7 @@ delivered file — the rule exists for a reason.
 ```bash
 bash scripts/run_all_tests.sh
 ```
-Green output = the 90 automated tests, the privacy audit, the pipeline, and
+Green output = the 98 automated tests, the privacy audit, the pipeline, and
 the accuracy gates all pass.
 
 ## 6. What this project is NOT (say this correctly to others)
