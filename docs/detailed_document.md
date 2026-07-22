@@ -8,7 +8,7 @@ audit flags) or a committed notebook; this document does not re-derive them.*
 
 ---
 
-## 1. Problem statement
+## 1. Problem & context
 
 EV charge-point operators run critical infrastructure with no operational
 rigor: chargers fail, and the operator finds out when a customer complains.
@@ -30,7 +30,7 @@ battery state-of-health or state-of-charge diagnostics. It runs beside any
 OCPP-compliant CMS: replaying historical exports today, consuming a live
 stream in production.
 
-## 2. Approach
+## 2. Approach and two-layer architecture
 
 Two detection layers with complementary failure modes:
 
@@ -51,8 +51,6 @@ assigns each alert a P1/P2/P3 tier and a human-readable deciding signal. This
 is the alert-fatigue answer and the project's business centerpiece: a fault
 that self-recovers in seconds is not the same event as one that never
 recovers, and the operator should never see them at the same priority.
-
-## 3. Architecture
 
 ```
 CMS event stream (prod)  ─┐
@@ -80,7 +78,15 @@ single `docker compose up`. Replay emits time-ordered JSON events; the
 detector consumes them, runs both layers, and streams prioritized alerts; the
 UI renders a live operator dashboard. No cloud dependency.
 
-## 4. Data
+## 3. Data — source scale vs delivered/validated
+
+Every scale figure in this document carries one of two tags, matching
+`docs/claims_evidence.md` exactly: **[SOURCE-SCALE]** — the size of the
+originating production CMS, evidenced by aggregate-count CSVs under
+`data/reference/` but *not* reproducible from the delivered slice — or
+**[VALIDATED]** — reproducible from the committed repo right now, with a
+reproduction command in `claims_evidence.md`. A source-scale figure is never
+presented as a validated one.
 
 Anonymized OCPP telemetry exports from a production CMS. Governance is
 enforced in-repo: raw CMS data is never committed (gitignored), charge-box
@@ -90,22 +96,22 @@ customer/RFID/IP fields are dropped at export. A committed audit script
 delivered taxonomy before commit** — 16,260 card-tag values, 3,807
 subscriber-phone rows, and 950 routable IPs, all masked (audit flag 22).
 
-**Two-tier fleet framing.** *Source scale* (the production CMS, evidenced by
-aggregate-count CSVs under `data/reference/`, not reproducible from the
-delivered slice): **655 chargers across 130+ manufacturer families and 209
-manufacturer-model configurations, 33.5M events (3.4M status + 30.1M
-telemetry), and 103,081 sessions** (`manufacturer_inventory.csv`,
-`source_event_totals.csv`, `source_session_count.csv`). *Delivered / validated
-slice* (what the system was built and measured on): **39 stations, 80
-connectors, 19 firmware versions, and 10,090 normal sessions**
-(`total_stations.csv`, `charger_stations.csv`, `normal_sessions.csv`).
+**Two-tier fleet framing.** **[SOURCE-SCALE]**: **655 chargers across 130+
+manufacturer families and 209 manufacturer-model configurations, 33.5M
+events (3.4M status + 30.1M telemetry), and 103,081 sessions**
+(`manufacturer_inventory.csv`, `source_event_totals.csv`,
+`source_session_count.csv`). **[VALIDATED]** — what the system was built and
+measured on: **39 stations, 80 connectors, 19 firmware versions, and 10,090
+normal sessions** (`total_stations.csv`, `charger_stations.csv`,
+`normal_sessions.csv`).
 
 Real fault data arrived late and in pieces, each analyzed and documented:
 
 - `error_taxonomy.csv` — 17,954 rows, 19 OCPP categories, **659 distinct
-  canonical vendor codes** (the delivered working taxonomy). The source CMS
-  logs 20,202 distinct vendor strings over 1.74M occurrences
-  (`source_vendor_code_counts.csv`); the delivered 659 resolve 100% (flag 22).
+  canonical vendor codes [VALIDATED]** (the delivered working taxonomy). The
+  source CMS logs 20,202 distinct vendor strings over 1.74M occurrences
+  **[SOURCE-SCALE]** (`source_vendor_code_counts.csv`); the delivered 659
+  resolve 100% (flag 22).
 - `missing_real_faults.csv` — 79,681 real fault events: GroundFailure 79,480,
   WeakSignal 150, OverVoltage 51 (flag 22).
 - `err1024_err1051_status_sequences.csv` — 21,910 rows of real err-code
@@ -113,18 +119,10 @@ Real fault data arrived late and in pieces, each analyzed and documented:
 - `err1024_crash_signature.csv` — the err1024 mechanism, 3 real events
   (flag 21).
 
-**Honest data limitations.** Temperature was absent (all-zero) in every
-fault-window export (flags 11/20); a late wide-matrix export proved real
-values exist at source (28–66 °C, n=79 — flag 26), and a final post-freeze
-delivery added 65,994 located readings (Body/Outlet sensors — flag 27). Both
-arrived after the Week 3 scope freeze, so temperature features stay out of
-this submission and are ledgered as future work. The err1051 machine is
-real-verified end-to-end on its status spine (88/88 real sequences, flag 25)
-and on a full connector-month with transaction linkage (2/2 episodes, flag
-27); its meter-zero corroborating step is exercised only on fixtures, because
-no delivered fault window carries meter rows.
+Data-driven limitations are stated plainly in §8 — they are part of the
+evidence trail, not a footnote.
 
-## 5. Methods
+## 4. Detection methods — six categories, deterministic
 
 **Layer 1.** `err1051` is a five-step state machine
 (IDLE → first-seen → meter-zero → second-seen → stop → recovery) that
@@ -145,6 +143,8 @@ sessions, repeat offenders, and a **station-wide** rule (a second connector of
 the same station faulting within 60 s → P1), motivated by the finding that
 **88% of real fault episodes hit both plugs within 5 s** (flag 19).
 
+## 5. Layer 2 degradation tracking — and the honest lead-time negative
+
 **Layer 2.** Per-connector Isolation Forests (`contamination='auto'`,
 `random_state=42`) on a `duration_sec` + `start_hour` feature vector, with
 vendor-family and global pooled fallback for sparse connectors. The SPEC's
@@ -155,17 +155,29 @@ session history shipped only after passing an FPR-non-degradation gate
 
 **Evaluation.** The headline metric is measured on a **chronological**
 per-connector 80/20 holdout (most recent 20% held out — production-mimicking),
-not a random split. A lead-time analysis tested whether Layer 2 drift precedes
-Layer 1 faults; it does not (lift 0.57×), so Layer 2 is framed honestly as
-orthogonal degradation tracking rather than early warning (flag 17).
+not a random split.
+
+**The lead-time negative, published rather than hidden.** A lead-time
+analysis tested whether Layer 2 drift precedes Layer 1 faults; it does not
+(lift 0.57× — `docs/layer2_leadtime.md`). Layer 2 is therefore framed
+honestly as **orthogonal degradation tracking**, never as early warning or
+predictive maintenance (flag 17). We regard publishing this negative result
+as a feature of the submission.
 
 ## 6. Results
 
+*All results in this section are **[VALIDATED]**-tier — reproducible from
+the committed repo; reproduction commands in `docs/claims_evidence.md`.*
+
 - **False-positive rate: 3.62%** on the chronological held-out split
-  (n = 2,015, threshold −0.1187). Per tier: heavy 3.3% / medium 3.5% /
-  light 3.2% / pooled 6.1%; `siemens` family 10.5% (n=76) on the watch list
-  (flag 14). This is the headline defensible number — comfortably under the
-  5% acceptance bar.
+  (n = 2,015, at the calibrated threshold −0.1187) — comfortably under the
+  5% acceptance bar. Per tier: heavy 3.3% / medium 3.5% / light 3.2% /
+  pooled 6.1%; `siemens` family 10.5% (n=76) on the watch list (flag 14).
+  Stated for completeness: at the **untuned SPEC default threshold (−0.1)
+  the rate is 5.26% — above the bar** (`docs/layer2_scope.md`), which is
+  precisely why the threshold was calibrated (random-split calibration
+  reference 4.02%, notebook 03). Both numbers are published; only the
+  calibrated one is claimed against the bar.
 - **Vendor-code coverage: 100% of the 659 delivered canonical codes resolve to
   a labeled OCPP category**, 0% unlabeled residue. Framed honestly: shape rules
   decide a minority (152 of 659) and the already-labeled `error_code` field the
@@ -185,7 +197,7 @@ orthogonal degradation tracking rather than early warning (flag 17).
   ~42% self-clear (n=2,041), which is why every other category defaults to
   P2/P1 (flags 12, 23).
 - **Pipeline:** `docker compose up` from a fresh clone brings all services up
-  with the UI answering HTTP 200; 79 automated tests pass (76 on a fresh
+  with the UI answering HTTP 200; 98 automated tests pass (95 on a fresh
   clone — 3 skip without a gitignored real-data file); the anonymization
   audit passes.
 
@@ -203,7 +215,40 @@ inference runs on any hardware.
 Scale path: a CMS vendor licenses the detection logic and bundles it as a
 platform feature.
 
-## 8. Future work
+## 8. Limitations — stated plainly
+
+Every limitation below is documented in a committed source; we consider this
+section a strength of the submission, not an apology.
+
+- **No predictive lead time.** Layer 2 drift does not precede Layer 1 faults
+  in our data (lift 0.57×, `docs/layer2_leadtime.md`). We claim degradation
+  *tracking*, never prediction.
+- **Thin Layer 2 feature vector.** `duration_sec` + `start_hour` only — the
+  measurand-rich features (temperature, power shape) are implemented and
+  tested but unvalidatable on the delivered exports
+  (`docs/layer2_scope.md`).
+- **Temperature is out of scope.** All-zero in every fault-window export
+  (flags 11/20); later deliveries proved real values exist at source
+  (28–66 °C, n=79, flag 26) and added 65,994 located readings (flag 27) —
+  both after the scope freeze, so the features stay out and are ledgered.
+- **err1051's meter-zero step is fixture-only.** The machine is real-verified
+  end-to-end on its status spine (88/88, flag 25) and on a connector-month
+  with transaction linkage (2/2, flag 27); no delivered fault window carries
+  meter rows, so that one corroborating step has never fired on real data.
+- **Telemetry-silence has no confirmed real positive.** Its 229 firings on
+  the capped export were export-truncation artifacts — documented as such
+  (flag 13). The detector is validated by unit tests and fixtures.
+- **Untuned threshold sits above the bar.** 5.26% FPR at the SPEC default;
+  the claimed 3.62% requires the calibrated threshold (−0.1187).
+- **Streaming ingestion tails a file, not a live socket.** The `--follow`
+  mode processes appended frames at arrival cadence; a live CMS WebSocket
+  transport remains future work (`docs/future_work.md`).
+- **Operational scope.** 6 of 19 OCPP categories have dedicated detectors;
+  GroundFailure needs episode dedup before production (79,480 events from
+  one chattering-sensor cohort); the dashboard's buffers are in-memory and
+  reset on restart.
+
+## 9. Future work
 
 Tracked in full in `docs/future_work.md`. Highlights:
 
@@ -219,7 +264,7 @@ Tracked in full in `docs/future_work.md`. Highlights:
 - **Autoencoder Layer 2**, natural-language fault query, multi-tenant SaaS,
   and detectors for the remaining 13 OCPP categories.
 
-## 9. Team
+## 10. Team
 
 | Name | Responsibility |
 |------|----------------|
