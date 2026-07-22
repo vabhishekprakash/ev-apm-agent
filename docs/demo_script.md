@@ -89,9 +89,12 @@ in this beat is REAL fleet data. Click the err1051 chip to filter.)*
 > slice of thirty-nine stations, eighty connectors, nineteen firmware
 > versions. The UnderVoltage alerts you're seeing are real fleet data — six
 > hundred thirty-seven events in the sequence export, all caught. Our
-> false-positive rate on a chronological held-out split is 3.6 percent —
-> measured, not vibes; at the untuned default threshold it's 5.3 percent,
-> still under our five percent bar. It deploys as a sidecar container next
+> false-alarm rate — that's the validated card on screen — is
+> three-point-six-two percent on a chronological held-out split, at our
+> calibrated threshold, comfortably under our five percent acceptance bar.
+> We publish the untuned default too: five-point-two-six percent, just
+> above the bar — which is exactly why we calibrated, and why we show both
+> numbers. It deploys as a sidecar container next
 > to any OCPP-compliant CMS: docker compose up, point it at the event
 > stream, alerts go wherever your ops live."
 
@@ -114,15 +117,22 @@ in this beat is REAL fleet data. Click the err1051 chip to filter.)*
 | 80% of 190 real err1051 ≤15 s | narration (flag 23); the prefilled queue holds 67 real self-recovered P3s | ✅ documented |
 | Degradation arc | drift panel, auto-selected 4784325 | ✅ live — **narrate as demo data through the real committed model** (real fleet reads noisier; lead-time doc) |
 | Anomaly score + flagged dots + fault flag | drift panel SVG | ✅ live |
-| FPR 3.6% (5.3% at untuned default) | narration; summary header shows the validated number | ✅ (say "held-out" out loud) |
+| False-alarm rate 3.62% (calibrated −0.1187, **under** the 5% bar); untuned default 5.26% (**above** the bar — never say "under" for this one) | narration matches the on-screen "FALSE-ALARM RATE (VALIDATED)" card; say "held-out" out loud | ✅ (layer2_scope.md:47) |
 | Source 655 / 130+ / delivered 39 / 80 / 19 | narration only (two-tier per claims_evidence.md) | ✅ audited |
 | 6 fault categories | coverage chips + feed — all six real-event verified (flags 18/22/23/25/27); the dashboard counter reads **7 of 19** on mixed streams because it counts Under- and OverVoltage separately | ✅ claimable |
 | Temperature asymmetry | — | ❌ cut (absent from delivered exports; flags 11/20/26) |
 
 ## Task 3 — strongest 20-second clip (hook)
 
-**The self-recovery downgrade at 0:40–1:00**: two visually identical
-err1051 faults, one turning grey (P3, "self-recovered in 13s"), one turning
-red (P1, "no recovery observed — technician"). It is the whole business
-case in one screen. Use as thumbnail + opening hook of the final video.
-(Runner-up: drift panel red-dot cluster, if the taxonomy story lands later.)
+**The three-tier escalation at 0:40–1:00, on all-REAL rows** (consistent
+with Task 2's table — there is **no** P1 err1051 "no recovery observed" row
+in this feed, so the hook never shows one): a real err1051 self-recovers in
+seconds and files itself **grey P3, log-only**; the same fault on a
+connector that re-offended within 24 h turns **amber P2, schedule**; an
+UnderVoltage repeat goes **red P1, dispatch**. Click the P3 row so the
+decision trace expands — the exact rules that fired, ending in the
+"nothing is generated" footer. It is the whole business case in one screen.
+The committed hook GIF (`docs/assets/hook_selfrecovery.gif`) shows exactly
+this: the trace of a real self-recovered err1051. (Runner-up: the drift
+panel's degrade-then-fault arc — narrate the demo-data honesty line if
+used.)
