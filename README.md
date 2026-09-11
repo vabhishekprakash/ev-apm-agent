@@ -1,37 +1,36 @@
-﻿# EV APM Agent
+# EV APM Agent
 
-![Live demo — the decision trace behind a real self-recovered err1051 socket fault, from the real fleet sequence export](docs/assets/hook_selfrecovery.gif)
+![Decision trace for a real err1051 socket fault that recovered on its own, replayed from the fleet's sequence export](docs/assets/hook_selfrecovery.gif)
 
-A watchful operator for EV charging stations that catches faults the instant they happen and spots chargers starting to go bad before they fully fail.
+EV APM Agent reads the OCPP messages that charging stations already send to their management system and raises an alert when a connector faults or starts behaving differently from its own history. It runs as a container next to the existing system, so it needs no new sensors or hardware. It reads charging-station telemetry only and is not a battery health tool.
 
-It plugs into the data the charging network already sends to its management system — no new sensors, no hardware changes.
+It has three parts. Layer 1 uses rules and state machines to catch known fault patterns as events arrive. Layer 2 trains an Isolation Forest for each connector on its normal sessions and flags sessions that drift from that baseline. A prioritizer then ranks every alert P1, P2 or P3 and attaches the signal that decided it, so faults that clear on their own don't compete with ones that need a technician.
 
-It does two things: a fast rules-based catcher for known fault patterns, and a learning layer that tracks each connector's "normal" over time to flag drift.
+I built and tested it on anonymized telemetry from a production fleet of 655 chargers across 130+ manufacturer families, and validated it on a 39-station, 80-connector slice of that fleet.
 
-It also sorts alerts — separating noisy self-recovering blips from real problems that need a technician — so operators stop drowning in noise.
+## Results
 
-We'll prove it on real data from a production CMS — **655 chargers across 130+ manufacturer families** at source, validated on a delivered **39-station / 80-connector** slice — deployed as a drop-in container next to an existing charging management system.
+- **6 of the 19 OCPP fault categories** detected, each checked against real events from the fleet exports ([`docs/category_metrics.md`](docs/category_metrics.md)).
+- **3.62% false-positive rate** for Layer 2 on a chronological holdout of 2,015 normal sessions ([notebook 04](notebooks/04_holdout_evaluation.ipynb)).
+- **152 of 190 real err1051 faults (80%)** recovered within 15 seconds and were downgraded to P3 automatically. Across all fault types only about 42% clear on their own (n=2,041), which is why the other categories stay at P1 or P2.
+- **659 vendor error codes** in the working taxonomy, all resolved to OCPP categories. The normalizer's own rules decide 152 of them; the rest come from the OCPP error code already present in each record.
+- **95 tests** pass on a fresh clone.
 
-## What this is (and isn't)
+Every number above has a reproduction command in [`docs/claims_evidence.md`](docs/claims_evidence.md).
 
-- **What it is:** Real-time fault detection and per-connector degradation tracking across an EV charging fleet.
-- **What it isn't:** Not a battery health diagnostic — it analyzes charging-station telemetry to flag faults and connector-level degradation, vendor-agnostic.
-- **Where it lives:** Deploys as a sidecar container next to an operator's existing CMS, scaling per fleet size.
+## What it gets wrong
 
-## Team
-
-| Name | Role |
-|------|------|
-| Abhishek | Layer 1 + integration + UI |
-| Akhil | Layer 2 + data + evaluation |
-| Hrishikesh | Testing + documentation |
+- **The detectors only report what stations report.** Layer 1 fires on fault events in the telemetry, so its 100% detection rate means every logged fault raised an alert. It does not find faults that a station never reported.
+- **Chattering sensors flood the alert feed.** One fleet segment produced 79,480 GroundFailure events in 14 months, and each one becomes a P1 alert. Repeated faults need to be collapsed into episodes before alerting ([`docs/future_work.md`](docs/future_work.md)).
+- **Layer 2 gives no early warning.** Across 3,484 sessions from one station, sessions right before a fault were flagged less often than other sessions (2.83% vs 4.99%). Layer 2 only sees session duration and start hour, which probably can't capture electrical warning signs ([`docs/layer2_leadtime.md`](docs/layer2_leadtime.md)).
+- **13 of 19 fault categories have no detector yet.**
 
 ## Project Structure
 
 | Folder | Purpose |
 |--------|---------|
-| `data/` | Raw and processed datasets (gitignored — never committed); committed `sql/` export queries and `reference/` inventory CSVs |
-| `detector/` | Detection service — `layer1.py` (rules-based fault catcher), `layer2.py` (drift detection and learning layer) |
+| `data/` | Raw and processed datasets (gitignored, never committed), plus committed `sql/` export queries and `reference/` inventory CSVs |
+| `detector/` | Detection service: `layer1.py` (rules-based fault detection), `layer2.py` (drift detection) |
 | `replay/` | Historical replay and simulation tools |
 | `models/` | Trained Layer 2 model artifacts |
 | `ui/` | Operator dashboard and alert interface |
@@ -41,31 +40,25 @@ We'll prove it on real data from a production CMS — **655 chargers across 130+
 
 ## Where to find things
 
-| You want… | Path |
+| You want | Path |
 |-----------|------|
-| **New here? Plain-language guide** (what/why/how, no jargon) | [`docs/GUIDE_FOR_HUMANS.md`](docs/GUIDE_FOR_HUMANS.md) |
-| **The full write-up** (problem, methods, results, deployment) | [`docs/detailed_document.md`](docs/detailed_document.md) |
-| **How to run and manually test it** (step-by-step) | [`docs/RUNBOOK.md`](docs/RUNBOOK.md) |
+| A plain-language guide (what, why, how) | [`docs/GUIDE_FOR_HUMANS.md`](docs/GUIDE_FOR_HUMANS.md) |
+| The full write-up (problem, methods, results, deployment) | [`docs/detailed_document.md`](docs/detailed_document.md) |
+| How to run and test it by hand | [`docs/RUNBOOK.md`](docs/RUNBOOK.md) |
 | Architecture diagram | [`docs/architecture_v2.svg`](docs/architecture_v2.svg) ([source](docs/architecture_v2.mmd)) |
-| Data audit & provenance (numbered flags) | [`docs/data_audit_final.md`](docs/data_audit_final.md) |
-| Layer 2 modeling & tier/pooling decisions | [`docs/layer2_scope.md`](docs/layer2_scope.md) |
+| Data audit and provenance (numbered flags) | [`docs/data_audit_final.md`](docs/data_audit_final.md) |
+| Layer 2 modeling and pooling decisions | [`docs/layer2_scope.md`](docs/layer2_scope.md) |
 | Multi-category detection audit | [`docs/multicategory_audit.md`](docs/multicategory_audit.md) |
-| Lead-time analysis (honest negative result) | [`docs/layer2_leadtime.md`](docs/layer2_leadtime.md) |
+| Lead-time analysis (negative result) | [`docs/layer2_leadtime.md`](docs/layer2_leadtime.md) |
 | Per-category detection metrics | [`docs/category_metrics.md`](docs/category_metrics.md) |
-| FPR & coverage charts | [`docs/assets/`](docs/assets/) |
-| Future work (scope-freeze ledger) | [`docs/future_work.md`](docs/future_work.md) |
+| False-positive and coverage charts | [`docs/assets/`](docs/assets/) |
+| Future work | [`docs/future_work.md`](docs/future_work.md) |
 
 ## Architecture
 
 ![Architecture v2](docs/architecture_v2.svg)
 
-Two-layer detection: **Layer 1** — deterministic fault-sequence state
-machines (err1051), point-event category detectors (err1024, WeakSignal,
-GroundFailure, Under/OverVoltage) and a telemetry-silence detector, fed
-through a vendor-code normalizer; **Layer 2** — per-connector Isolation
-Forests (pooled fallback for sparse connectors) scoring every closed
-session. An alert prioritizer tiers everything (P1/P2/P3) with the deciding
-signal attached before it reaches the dashboard.
+Layer 1 combines state machines for fault sequences (err1051), point-event detectors (err1024, WeakSignal, GroundFailure, Under/OverVoltage) and a telemetry-silence detector, all fed through a vendor-code normalizer. Layer 2 is a per-connector Isolation Forest, with a pooled model for connectors that have too little data, and it scores every closed session. The prioritizer assigns P1, P2 or P3 and attaches the deciding signal before an alert reaches the dashboard.
 
 ## Quickstart
 
@@ -86,22 +79,13 @@ Local pipeline without Docker:
 
 ```bash
 REPLAY_SPEED_MULTIPLIER=0 python replay/main.py | python detector/main.py
-python -m pytest tests/    # 98 tests (95 on a fresh clone)
+python -m pytest tests/    # 95 pass on a fresh clone; 3 more need the raw exports, which aren't committed
 ```
 
-Full step-by-step run + manual-test instructions: [`docs/RUNBOOK.md`](docs/RUNBOOK.md).
-
-Headline metric: **3.62% false-positive rate** on a chronological held-out
-split (notebook 04); alert thresholds documented in `.env.example`.
+Full step-by-step run and manual-test instructions: [`docs/RUNBOOK.md`](docs/RUNBOOK.md). Alert thresholds are set in `.env.example`.
 
 ## Attribution
 
-Built for the **ET AI Hackathon 2026** by V. Abhishek Prakash (Layer 1 +
-integration), Akhil Prasad (Layer 2 + data audit), and Hrishikesh
-(testing + documentation).
+Built for the **ET AI Hackathon 2026** by a team of three. V. Abhishek Prakash wrote the code, models and data pipeline. Akhil Prasad and Hrishikesh were teammates and edited this README.
 
-Data provenance: anonymized OCPP telemetry exports from a production
-charging-management system (charge-box ids SHA-256-hashed, geo coordinates
-rounded, customer/RFID/IP fields dropped at export). Raw exports are never
-committed — see `.gitignore` and [`docs/data_audit_final.md`](docs/data_audit_final.md)
-for the audit trail. MIT licensed.
+Data provenance: anonymized OCPP telemetry exports from a production charging-management system (charge-box IDs SHA-256-hashed, coordinates rounded, customer, RFID and IP fields dropped at export). Raw exports are never committed; see `.gitignore` and [`docs/data_audit_final.md`](docs/data_audit_final.md) for the audit trail. MIT licensed.
