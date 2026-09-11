@@ -1,6 +1,6 @@
 # EV Asset Performance Management Agent: Detailed Document
 
-**ET AI Hackathon 2026** Team of three. V. Abhishek Prakash wrote the code, models and data pipeline; Akhil Prasad handled manual testing and submission logistics, and Hrishikesh did manual testing.
+**ET AI Hackathon 2026** Team of three · V. Abhishek Prakash wrote the code, models and data pipeline; Akhil Prasad handled manual testing and submission logistics, and Hrishikesh did manual testing.
 
 *Every quantitative claim below traces to `docs/data_audit_final.md` (numbered
 audit flags) or a committed notebook; this document does not re-derive them.*
