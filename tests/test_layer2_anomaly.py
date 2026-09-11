@@ -1,4 +1,4 @@
-"""Unit tests for the Layer2Anomaly inference wrapper (SPEC Day 6, Akhil Task 2)."""
+"""Unit tests for the Layer2Anomaly inference wrapper."""
 
 import pickle
 

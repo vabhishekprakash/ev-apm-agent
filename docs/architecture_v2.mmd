@@ -28,7 +28,7 @@ flowchart LR
         PROD[Slack / PagerDuty / CMS write API<br/>production]:::dashed
     end
 
-    subgraph training [Offline training — Akhil's machine]
+    subgraph training [Offline training]
         NS[normal_sessions.csv +<br/>recovered Station-A history] --> NB[notebooks 03-05<br/>chronological holdout, threshold calibration,<br/>expanded-normal gate]
         NB --> PKL[models/*.pkl committed<br/>+ index, threshold -0.1187]
     end

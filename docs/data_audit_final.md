@@ -1,8 +1,6 @@
 # Data Audit v0
 
-Formalized from the Week 1 audit (source numbers: SPEC.md §3). Owner: Akhil.
-Reproduce via `notebooks/01_data_audit.ipynb` once the reference CSVs are in
-`data/reference/`.
+Formalized from the Week 1 audit (source numbers: SPEC.md §3). Reproduction commands for the headline figures are in `docs/claims_evidence.md`.
 
 ## Source and constraints
 

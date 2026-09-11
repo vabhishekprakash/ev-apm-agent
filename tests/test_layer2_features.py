@@ -1,4 +1,4 @@
-"""Unit tests for Day 4 temperature features (SPEC Day 4, Akhil Tasks 1-3).
+"""Unit tests for the temperature features..
 
 Real exports lack the measurand/location columns until the Workbench
 re-export lands (audit flag 6), so per the SPEC Day 4 Joint fallback these

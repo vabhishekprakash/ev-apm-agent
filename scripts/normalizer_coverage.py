@@ -1,4 +1,4 @@
-"""Vendor-code normalizer coverage measurement (Week 2 Day 4, Akhil Task 2).
+"""Vendor-code normalizer coverage measurement.
 
 Usage: py scripts/normalizer_coverage.py [taxonomy.csv]
 

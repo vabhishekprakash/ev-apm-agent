@@ -1,4 +1,4 @@
-"""Vendor error-code normalization (Week 2 Day 4, Akhil Task 1).
+"""Vendor error-code normalization.
 
 normalize(vendor_error_code, error_code) -> canonical OCPP category string.
 

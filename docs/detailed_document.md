@@ -1,7 +1,6 @@
 # EV Asset Performance Management Agent — Detailed Document
 
-**ET AI Hackathon 2026** · Team: V. Abhishek Prakash (Layer 1 + integration),
-Akhil Prasad (Layer 2 + data audit), Hrishikesh (testing + documentation)
+    **ET AI Hackathon 2026** · Team of three. V. Abhishek Prakash wrote the code, models and data pipeline; Akhil Prasad and Hrishikesh edited the README.
 
 *Every quantitative claim below traces to `docs/data_audit_final.md` (numbered
 audit flags) or a committed notebook; this document does not re-derive them.*
@@ -268,9 +267,9 @@ Tracked in full in `docs/future_work.md`. Highlights:
 
 | Name | Responsibility |
 |------|----------------|
-| V. Abhishek Prakash | Layer 1 detectors, prioritizer, replay/detector/UI integration, Docker pipeline |
-| Akhil Prasad | Layer 2 modeling, data audit, taxonomy + normalization, evaluation notebooks |
-| Hrishikesh | Manual testing, documentation review, submission logistics |
+| V. Abhishek Prakash | Layer 1 detectors, Layer 2 modeling, data audit, taxonomy and normalization, evaluation notebooks, prioritizer, integration, UI, Docker pipeline |
+| Akhil Prasad | README edits, Manual Testing, submission logistics |
+| Hrishikesh | README edits, Manual testing |
 
 *Provenance: anonymized OCPP telemetry from a production charging-management
 system. Charge-box IDs SHA-256-hashed; geo rounded; customer/RFID/IP

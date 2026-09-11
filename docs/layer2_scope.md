@@ -1,6 +1,6 @@
 # Layer 2 Scope — per-connector vs pooled baselines
 
-Owner: Akhil. Decision doc for which connectors get their own baseline model
+Decision doc for which connectors get their own baseline model
 and which fall back to the pooled cohort baseline.
 
 ## Decision

@@ -1,6 +1,6 @@
 """Layer 2 — unsupervised per-connector drift detection.
 
-Owner: Akhil. Day 4: temperature features (_peak_temp_features,
+Temperature features (_peak_temp_features,
 _temp_asymmetry_features). Feature logic and Isolation Forest training land
 Week 1-2 (see docs/SPEC.md §4.1, §8). Tier cutoffs live in docs/layer2_scope.md.
 
@@ -301,7 +301,7 @@ class PooledBaseline:
 class IsolationForestScorer:
     """Inference wrapper around the trained Isolation Forest artifact.
 
-    Training happens offline on Akhil's machine; the .pkl artifact is committed
+    Training happens offline; the .pkl artifact is committed
     to models/ and only loaded for inference here (SPEC §4.3, §5.2).
     """
 

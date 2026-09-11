@@ -1,3 +1,5 @@
+    > This is the original hackathon task plan. Tasks assigned to Akhil here were done by Abhishek; see the README for final attribution.
+  
 # EV APM Agent — Week 1, Days 4–6
 
 **Context anchor:** Day 3 complete, `main` at `9da7d0d`. Day 1–3 close-out done: repo skeleton, `.gitignore`/`.dockerignore`/`.env.example` in, Pattern B structure adopted (`detector/layer1.py`, `detector/layer2.py`), `detector/ocpp_messages.py` + `replay/main.py` v0 + `docs/data_audit_v0.md` + `docs/layer2_scope.md` committed.
