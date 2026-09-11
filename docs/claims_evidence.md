@@ -50,7 +50,7 @@ PY
 | Stations | **39** | `wc -l data/reference/total_stations.csv` → 39 |
 | Connectors | **80** | `wc -l data/reference/charger_stations.csv` → 80 |
 | Delivered normal sessions | **10,090** | `wc -l data/reference/normal_sessions.csv` → 10,090 |
-| Working taxonomy — canonical codes | **659** distinct, **100% resolved** | `python detector/vendor_code_normalizer.py --measure-coverage data/reference/error_taxonomy.csv --min-coverage 0.80` |
+| Working taxonomy — canonical codes | **659** distinct, **100% resolved** (the coverage script prints 660 because it also counts one empty code field) | `python detector/vendor_code_normalizer.py --measure-coverage data/reference/error_taxonomy.csv --min-coverage 0.80` |
 | Layer 2 false-positive rate | **3.62%** (n=2,015, threshold −0.1187) | `notebooks/04_holdout_evaluation.ipynb`; restated by `bash scripts/run_all_tests.sh` §5 |
 | Fault categories detected | **6 of 19**, **all six real-event verified** (dashboard counter reads 7 of 19 on mixed streams: it counts Under-/OverVoltage separately) | `docs/category_metrics.md`; `pytest tests/test_multicategory.py tests/test_layer1_err1051.py` |
 | err1051 self-recovery | **80% (152/190) ≤15 s, median 10 s** | `docs/category_metrics.md:8`; `docs/data_audit_final.md` flag 23 |
