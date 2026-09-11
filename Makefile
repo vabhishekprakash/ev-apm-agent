@@ -1,4 +1,4 @@
-# Finals verification entrypoint (FINALS_EXIT_CRITERIA.md §6).
+# Verification entrypoint: runs every machine-checkable check
 # `make verify` = every machine-checkable gate; add --with-docker via
 # `make verify-full` (needs Docker Desktop running).
 PY ?= py
