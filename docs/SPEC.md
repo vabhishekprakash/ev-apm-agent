@@ -1,4 +1,4 @@
-    > This is the original hackathon task plan. Tasks assigned to Akhil here were done by Abhishek; see the README for final attribution.
+> This is the original hackathon task plan. Tasks assigned to Akhil here were done by Abhishek; see the README for final attribution.
   
 # EV APM Agent — Week 1, Days 4–6
 

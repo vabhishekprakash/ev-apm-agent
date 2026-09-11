@@ -1,4 +1,4 @@
-"""Week 2 Day 4: vendor code normalization rules."""
+"""Vendor code normalization rules."""
 
 import pickle
 

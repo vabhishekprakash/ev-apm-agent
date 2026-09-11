@@ -86,6 +86,4 @@ Full step-by-step run and manual-test instructions: [`docs/RUNBOOK.md`](docs/RUN
 
 ## Attribution
 
-Built for the **ET AI Hackathon 2026** by a team of three. V. Abhishek Prakash wrote the code, models and data pipeline. Akhil Prasad and Hrishikesh were teammates and edited this README.
-
-Data provenance: anonymized OCPP telemetry exports from a production charging-management system (charge-box IDs SHA-256-hashed, coordinates rounded, customer, RFID and IP fields dropped at export). Raw exports are never committed; see `.gitignore` and [`docs/data_audit_final.md`](docs/data_audit_final.md) for the audit trail. MIT licensed.
+Built for the **ET AI Hackathon 2026** by a team of three. V. Abhishek Prakash wrote the code, models and data pipeline. Akhil Prasad handled manual testing and submission logistics, Hrishikesh did manual testing, and both edited this README.

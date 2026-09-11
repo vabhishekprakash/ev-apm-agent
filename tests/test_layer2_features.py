@@ -1,4 +1,4 @@
-"""Unit tests for the temperature features..
+"""Unit tests for the temperature features.
 
 Real exports lack the measurand/location columns until the Workbench
 re-export lands (audit flag 6), so per the SPEC Day 4 Joint fallback these
