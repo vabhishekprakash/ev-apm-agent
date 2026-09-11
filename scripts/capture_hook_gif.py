@@ -4,7 +4,7 @@ Drives the REAL dashboard in headless Chromium while the demo fixture streams
 through the detector, screenshotting each poll cycle — nothing is mocked. The
 GIF appears at the top of the README.
 
-Usage: py scripts/capture_hook_gif.py 
+Usage: python scripts/capture_hook_gif.py 
 Output: docs/assets/hook_selfrecovery.gif
 """
 

@@ -45,7 +45,7 @@ SaaS).
 ## Product
 - Alert-log download button.
 - Per-STATION rollup view (per-connector health rollup SHIPPED 2026-07-08
-  indetector/health_rollup.py);
+  in `detector/health_rollup.py`);
   Slack/PagerDuty sink implementations.
 - ~~Raw OCPP-J ingestion so the agent consumes native CMS logs, not just
   flattened CSVs~~ — **MOSTLY RESOLVED 2026-07-12→16** (PRs #59/#60/#66):
