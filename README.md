@@ -11,7 +11,7 @@ I built and tested it on anonymized telemetry from a production fleet of 655 cha
 ## Results
 
 - **6 of the 19 OCPP fault categories** detected, each checked against real events from the fleet exports ([`docs/category_metrics.md`](docs/category_metrics.md)).
-- **3.62% false-positive rate** for Layer 2 on a chronological holdout of 2,015 normal sessions ([notebook 04](notebooks/04_holdout_evaluation.ipynb)).
+- **3.62% false-positive rate** for Layer 2 on a chronological holdout of 2,015 normal sessions, at a tuned threshold of -0.1187. The default threshold of -0.1 gives 5.26% ([notebook 04](notebooks/04_holdout_evaluation.ipynb)).
 - **152 of 190 real err1051 faults (80%)** recovered within 15 seconds and were downgraded to P3 automatically. Across all fault types only about 42% clear on their own (n=2,041), which is why the other categories stay at P1 or P2.
 - **659 vendor error codes** in the working taxonomy, all resolved to OCPP categories. The normalizer's own rules decide 152 of them; the rest come from the OCPP error code already present in each record.
 - **95 tests** pass on a fresh clone.
@@ -23,7 +23,16 @@ Every number above has a reproduction command in [`docs/claims_evidence.md`](doc
 - **The detectors only report what stations report.** Layer 1 fires on fault events in the telemetry, so its 100% detection rate means every logged fault raised an alert. It does not find faults that a station never reported.
 - **Chattering sensors flood the alert feed.** One fleet segment produced 79,480 GroundFailure events in 14 months, and each one becomes a P1 alert. Repeated faults need to be collapsed into episodes before alerting ([`docs/future_work.md`](docs/future_work.md)).
 - **Layer 2 gives no early warning.** Across 3,484 sessions from one station, sessions right before a fault were flagged less often than other sessions (2.83% vs 4.99%). Layer 2 only sees session duration and start hour, which probably can't capture electrical warning signs ([`docs/layer2_leadtime.md`](docs/layer2_leadtime.md)).
+- **Connectors with little data get noisier alerts.** Connectors that share a pooled model had a 6.1% false-positive rate (n=148), and the Siemens family 10.5% (n=76), against 3.62% overall ([`docs/layer2_scope.md`](docs/layer2_scope.md)).
 - **13 of 19 fault categories have no detector yet.**
+
+## Design decisions
+
+- **I chose a chronological holdout over a random split** because the model always scores sessions that come after its training data. I held out the most recent 20% of each connector's sessions. A random split lets the model learn from the future; here it gave 4.02%, close to the chronological 3.62%.
+- **I chose rules for known faults and an Isolation Forest only for drift** because known faults like err1051 have exact signatures in the OCPP messages, so a state machine catches them without training data and can explain every alert. The unsupervised model covers what nothing labels: sessions that look unusual for that connector.
+- **I chose to give a connector its own model only at 100+ normal sessions** because below that its statistics were mostly noise. Smaller connectors share a model for their vendor family. The committed data supported 22 per-connector models.
+- **I chose family pools with a global fallback over one pool per family** because families with fewer than 50 sessions produced meaningless models; the first training run built one from a single session. Families with 50+ sessions keep their own pooled model and the rest share a global one.
+- **I chose to auto-downgrade only err1051** because 80% of err1051 faults clear within 15 seconds, while only about 42% of all faults clear on their own. Downgrading other categories would hide faults that need a technician.
 
 ## Project Structure
 
@@ -42,7 +51,7 @@ Every number above has a reproduction command in [`docs/claims_evidence.md`](doc
 
 | You want | Path |
 |-----------|------|
-| A plain-language guide (what, why, how) | [`docs/GUIDE_FOR_HUMANS.md`](docs/GUIDE_FOR_HUMANS.md) |
+| A plain-language guide (what, why, how) | [`docs/OVERVIEW.md`](docs/OVERVIEW.md) |
 | The full write-up (problem, methods, results, deployment) | [`docs/detailed_document.md`](docs/detailed_document.md) |
 | How to run and test it by hand | [`docs/RUNBOOK.md`](docs/RUNBOOK.md) |
 | Architecture diagram | [`docs/architecture_v2.svg`](docs/architecture_v2.svg) ([source](docs/architecture_v2.mmd)) |
