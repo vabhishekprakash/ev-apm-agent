@@ -2,7 +2,7 @@
 
 normalize(vendor_error_code, error_code) -> canonical OCPP category string.
 
-The fleet's taxonomy (Errornotify: ~17.5k distinct vendor codes across 19
+The fleet's taxonomy (20,202 distinct vendor codes at source across 19
 OCPP-standard categories) mixes structured families (hex codes, ER###/C###,
 Alarm-Err pairs) with freeform strings. Rules route what is unambiguous from
 the string shape; everything else falls through to the export's own
@@ -139,7 +139,7 @@ def load_taxonomy_table(path: str | Path) -> dict:
     return counts
 
 
-if __name__ == "__main__":  # FINALS_EXIT_CRITERIA §6: --measure-coverage CLI
+if __name__ == "__main__":  # --measure-coverage CLI
     import argparse
     import sys as _sys
     from pathlib import Path as _Path

@@ -111,10 +111,7 @@ the OverVoltage/GroundFailure rows the fixture stages on 2009529/1679593 —
 is **synthetic fixture data**; the drift arc on 4784325 is demo sessions
 scored by the real committed model. Never narrate fixture rows as real.
 
-**Recording note:** never replay `demo_replay` at 60× (79-hour span ≈ 50 min
-to the first alert). Live on-camera motion comes from the `--follow` raw-log
-tail (§3½.1, ~3 s append-to-dashboard) — full recording sequence in
-`docs/demo_script.md`.
+**Note:** don't replay `demo_replay` at 60× (its 79-hour span takes about 50 minutes to reach the first alert). For live motion on the dashboard, use the `--follow` raw-log tail (§3½.1, about 3 s from append to dashboard).
 
 Stop / reset (also the duplication reset):
 ```bash
@@ -316,5 +313,4 @@ python scripts/normalizer_coverage.py # vendor-code coverage (needs error_taxono
 A clean end-to-end run shows: alerts streaming into the UI within ~2 s of
 replay, color-coded P1/P2/P3 with plain-language deciding signals, the coverage
 bar counting categories, and the drift panel rendering a score trend. That is
-the whole product in one screen — see `docs/demo_script.md` for the narrated
-walkthrough.
+the whole product in one screen.

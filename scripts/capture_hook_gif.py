@@ -2,10 +2,9 @@
 
 Drives the REAL dashboard in headless Chromium while the demo fixture streams
 through the detector, screenshotting each poll cycle — nothing is mocked. The
-GIF is the video thumbnail / opening hook (docs/demo_script.md Task 3); the
-narrated recording itself is a Week 3 human task.
+GIF appears at the top of the README.
 
-Usage: py scripts/capture_hook_gif.py   (needs playwright + chromium installed)
+Usage: py scripts/capture_hook_gif.py 
 Output: docs/assets/hook_selfrecovery.gif
 """
 

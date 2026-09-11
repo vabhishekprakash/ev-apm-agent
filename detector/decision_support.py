@@ -1,4 +1,4 @@
-"""Decision-support enrichment (week_3_recommended_plan, Task 2).
+"""Decision-support enrichment.
 
 Every alert payload gains four fields before it reaches a sink:
 

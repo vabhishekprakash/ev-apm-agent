@@ -239,9 +239,8 @@ path) — encoded as a Layer 1 sub-detector.
     data/raw, gitignored). Alert enrichment now covers the fault segment.
     Decision-support fields (confidence / likely_root_cause /
     recommended_action / impact_class) and the connector-health rollup
-    shipped per docs/layer_1_plan.md + docs/week_3_recommended_plan.md
-    (scope-freeze lifted by owner for these items; Layer-1 P2/SKIP
-    categories remain out per the ROI matrix).
+    shipped in Week 3. The remaining Layer 1 P2/SKIP categories stay out
+    of scope.
 25. **err1051 real-verified end-to-end (2026-07-10).** Requirement direction:
     verify the full sequence against the real status-sequence export
     (flag 23). The machine gained a status-only evidence path — real streams

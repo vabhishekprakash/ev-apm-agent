@@ -43,9 +43,9 @@ SaaS).
 - Autoencoder Layer 2; per-connector online retraining cadence.
 
 ## Product
-- Alert-log download button (judge quality-of-life, exit-doc nice-to-have 3).
+- Alert-log download button.
 - Per-STATION rollup view (per-connector health rollup SHIPPED 2026-07-08
-  via week_3_recommended_plan — `detector/health_rollup.py`);
+  indetector/health_rollup.py);
   Slack/PagerDuty sink implementations.
 - ~~Raw OCPP-J ingestion so the agent consumes native CMS logs, not just
   flattened CSVs~~ — **MOSTLY RESOLVED 2026-07-12→16** (PRs #59/#60/#66):

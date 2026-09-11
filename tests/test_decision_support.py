@@ -1,4 +1,4 @@
-"""Decision-support field enrichment (week_3_recommended_plan Task 2)."""
+"""Decision-support field enrichment."""
 
 from decision_support import enrich
 
